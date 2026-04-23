@@ -1,0 +1,30 @@
+---
+description: Acceptance testing rules for end-to-end Java API testing and workflow verification
+globs: ["**/src/test/**/*AcceptanceTest.java", "**/src/test/**/*AT.java"]
+alwaysApply: false
+---
+
+# Acceptance Testing
+
+## Scope
+- Test complete business workflows end-to-end through the API
+- Verify correct HTTP status codes, response bodies, and side effects
+- Test authentication and authorization flows
+- Cover both happy path and error scenarios
+
+## Approach
+- Full application context with real (or containerized) dependencies
+- All external services stubbed or containerized
+- Test from the API consumer's perspective
+
+## Organization
+- Group by feature/domain, not by endpoint
+- Each test class covers a complete feature scenario
+- Clean database state before each test
+
+## Naming
+- `*AcceptanceTest.java` or `*AT.java`
+- Run separately from unit and integration tests
+
+## Related
+- Deep guidance: `skills/java-testing/references/acceptance-testing.md`

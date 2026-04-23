@@ -1,0 +1,75 @@
+---
+description: Microservices architecture rules -- service boundaries, communication patterns, data ownership, resilience, and observability for distributed Java systems
+globs: ["**/src/main/java/**"]
+alwaysApply: false
+---
+
+# Microservices Architecture
+
+## Service Boundaries
+
+- Align services with bounded contexts (DDD)
+- Each service owns its data store exclusively -- no shared databases
+- Services must be independently deployable
+- Each service has a clear public API contract
+- Prefer coarse-grained service APIs over chatty interfaces
+
+## Communication Patterns
+
+| Pattern | When to Use | Protocol |
+|---------|-------------|----------|
+| Synchronous request-response | Queries with sub-100ms SLA | REST / gRPC |
+| Asynchronous messaging | Commands, cross-aggregate operations | Kafka / RabbitMQ |
+| Event-driven | Notifications, eventually consistent updates | Kafka / SNS |
+| Saga orchestration | Multi-service transactions | Choreography or orchestrator |
+
+Rules:
+- Use async messaging for long-running or cross-aggregate operations
+- Never use synchronous calls for operations that can tolerate eventual consistency
+- Propagate correlation IDs (`X-Correlation-ID`) in all inter-service calls
+
+## Data Management
+
+- Database per service -- no shared schemas
+- Use event sourcing or change data capture for cross-service data needs
+- Eventual consistency as the default; strong consistency only within aggregate boundaries
+- API composition or CQRS for cross-service queries
+
+## Resilience Patterns
+
+Every external call must have:
+- **Timeout**: Explicit timeout (e.g., 2s for HTTP, 5s for database)
+- **Retry**: With exponential backoff and jitter; set a retry budget
+- **Circuit breaker**: Open after N failures, half-open after cooldown
+- **Fallback**: Graceful degradation path when dependency is unavailable
+- **Bulkhead**: Isolate critical from non-critical calls
+
+Spring Boot integration: Use Resilience4j (`resilience4j-spring-boot3` starter).
+
+## Observability
+
+- **Distributed tracing**: Micrometer Tracing with Zipkin/Jaeger
+- **Correlation IDs**: Propagated via MDC in structured logging
+- **Health checks**: `/actuator/health/liveness` and `/actuator/health/readiness`
+- **Metrics**: Micrometer with Prometheus endpoint
+- **Centralized logging**: Structured JSON logs, shipped to ELK/Loki
+
+## Deployment
+
+- Health and readiness probes for container orchestration
+- Canary or blue-green deployment strategy
+- Configuration externalized via Spring Cloud Config or environment variables
+- Secrets via vault or container orchestrator secrets
+
+## Anti-Patterns to Avoid
+
+- Distributed monolith (services coupled by shared database or synchronous chains)
+- Shared database between services
+- Synchronous chains across multiple services
+- Missing distributed tracing
+- No circuit breakers on external calls
+
+## Related
+- `rules/architecture/ddd.mdc` -- DDD for service boundaries
+- `rules/architecture/design-patterns.mdc` -- architecture patterns
+- `skills/spring-cloud/` -- Spring Cloud patterns

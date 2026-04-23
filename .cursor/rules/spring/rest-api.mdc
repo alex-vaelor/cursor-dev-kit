@@ -1,0 +1,109 @@
+---
+description: Spring Boot REST API conventions for HTTP methods, status codes, DTOs, validation, error handling, and API-first design
+globs: ["**/src/main/java/**/*Controller*.java", "**/src/main/java/**/*Resource*.java", "**/src/main/java/**/*Api*.java"]
+alwaysApply: false
+---
+
+# Spring Boot REST API
+
+Aligned with Spring Boot 4.0.x / Spring Framework 7.0.x.
+
+## HTTP Semantics
+- GET: read-only, cacheable. POST: create. PUT: replace. PATCH: partial update. DELETE: remove
+- Resource URIs are nouns, plural: `/users`, `/orders/{id}`
+- Never expose verbs in URIs (no `/getUser`, `/deleteOrder`)
+
+## Status Codes
+- 200 OK, 201 Created (with `Location` header), 204 No Content
+- 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict
+- 500 Internal Server Error (never intentionally return)
+
+## DTOs and Records
+- Use records for request/response DTOs
+- Never expose domain entities directly in API responses
+- ISO-8601 `Instant` for timestamps in DTOs
+
+## Validation
+- `@Valid` on request body parameters
+- Bean Validation annotations: `@NotNull`, `@Size`, `@Pattern`
+- Validate at the boundary, not deep in the domain
+
+## Error Handling
+- `@ControllerAdvice` with `@ExceptionHandler` for centralized error mapping
+- RFC 9457 Problem Details for error responses
+- Never expose stack traces or internal class names in API responses
+
+## API-First (OpenAPI)
+- `openapi.yaml` as the source of truth
+- Generate interfaces with OpenAPI Generator (`useSpringBoot4` flag)
+- Implement generated interfaces in `@RestController` classes
+
+## Versioning and Deprecation
+- URI path versioning (`/v1/users`) or header-based
+- `Deprecation` and `Sunset` headers for deprecated endpoints
+
+## Pagination
+- Query params: `page`, `size`, `sort`
+- Return total count and link headers or HATEOAS links
+
+## HATEOAS
+Use Spring HATEOAS for public APIs where discoverability and self-describing responses matter.
+
+### When to Use
+- Public APIs consumed by external clients
+- APIs where link relations guide client navigation
+- Hypermedia-driven workflows (state transitions via links)
+
+### When to Skip
+- Internal microservice-to-microservice APIs (overhead without benefit)
+- Simple CRUD APIs with well-known, stable endpoints
+
+### Implementation
+```java
+@RestController
+@RequestMapping("/api/v1/orders")
+public class OrderController {
+
+    private final OrderModelAssembler assembler;
+
+    @GetMapping("/{id}")
+    public EntityModel<OrderResponse> getOrder(@PathVariable Long id) {
+        var order = orderService.findById(id);
+        return assembler.toModel(order);
+    }
+
+    @GetMapping
+    public CollectionModel<EntityModel<OrderResponse>> listOrders(Pageable pageable) {
+        var orders = orderService.findAll(pageable);
+        return assembler.toCollectionModel(orders);
+    }
+}
+
+@Component
+public class OrderModelAssembler implements RepresentationModelAssembler<OrderResponse, EntityModel<OrderResponse>> {
+
+    @Override
+    public EntityModel<OrderResponse> toModel(OrderResponse order) {
+        return EntityModel.of(order,
+            linkTo(methodOn(OrderController.class).getOrder(order.id())).withSelfRel(),
+            linkTo(methodOn(OrderController.class).listOrders(Pageable.unpaged())).withRel("orders"));
+    }
+}
+```
+
+### HAL Response Example
+```json
+{
+  "id": 1,
+  "description": "Order 1",
+  "status": "CONFIRMED",
+  "_links": {
+    "self": { "href": "/api/v1/orders/1" },
+    "orders": { "href": "/api/v1/orders" }
+  }
+}
+```
+
+## Related
+- Deep guidance: `skills/spring-boot-rest/`
+- HATEOAS guide: `skills/api-design/references/hateoas-guide.md`

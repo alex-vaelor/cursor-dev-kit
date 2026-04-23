@@ -1,0 +1,58 @@
+---
+description: Java secure coding rules covering input validation, injection prevention, secrets management, and dependency security
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Secure Coding
+
+## Input Validation
+- Validate all external input at system boundaries (controllers, message handlers, file readers)
+- Use Bean Validation (`@NotNull`, `@Size`, `@Pattern`) for declarative validation
+- Reject invalid input early -- fail fast
+- Sanitize output to prevent XSS when rendering user-supplied content
+
+## Injection Prevention
+- SQL: always use parameterized queries or Spring Data query methods -- never string concatenation
+- LDAP, XPath, OS commands: use parameterized APIs
+- Log injection: sanitize user input before logging (strip newlines, control characters)
+- Deserialization: never deserialize untrusted data with Java serialization; use JSON/XML with strict schemas
+
+## Secrets Management
+- Never hardcode secrets (passwords, API keys, tokens) in source code
+- Use environment variables, vault services, or Spring Cloud Config for secrets
+- Exclude secret files from version control (`.env`, `credentials.json` in `.gitignore`)
+- Rotate secrets regularly; support hot-reloading where possible
+
+## Authentication and Authorization
+- Use Spring Security `SecurityFilterChain` for HTTP security
+- Enforce authentication on all endpoints by default; explicitly permit public endpoints
+- Use method-level security (`@PreAuthorize`, `@Secured`) for fine-grained access control
+- Store passwords with bcrypt or Argon2 -- never MD5 or SHA-1
+
+## Cryptography
+- Use `java.security` and `javax.crypto` APIs -- never custom crypto
+- TLS 1.2+ for all network communication
+- Secure random: `SecureRandom`, never `Random` for security-sensitive contexts
+- Key sizes: RSA >= 2048, AES >= 256, ECDSA >= P-256
+
+## Dependency Security
+- Scan dependencies with OWASP Dependency-Check in every build
+- Subscribe to security advisories for direct dependencies
+- Pin dependency versions; review changelogs before upgrading
+- Remove unused dependencies to reduce attack surface
+
+## Secure Defaults
+- HttpOnly, Secure, SameSite flags on cookies
+- CSRF protection enabled by default (disable only for stateless APIs with token auth)
+- CORS configured explicitly per endpoint -- never `allowedOrigins("*")` in production
+- Response headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`
+
+## Error Handling for Security
+- Never expose stack traces, class names, or internal paths in API error responses
+- Use Problem Details (RFC 9457) with generic error messages
+- Log detailed errors server-side with correlation IDs
+
+## Related
+- Deep guidance: `skills/java-secure-coding/`
+- OWASP Top 10 reference

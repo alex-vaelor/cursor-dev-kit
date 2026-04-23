@@ -1,0 +1,56 @@
+---
+description: Agile epic definition rules -- structure, business value, scope, success criteria, and breakdown patterns for large initiatives
+globs: ["**/docs/epics/**", "**/docs/agile/**"]
+alwaysApply: false
+---
+
+# Agile Epics
+
+## Definition
+
+An epic is a large body of work that delivers a significant business capability. It can be broken down into features and user stories.
+
+## Epic Structure
+
+Every epic document must include:
+
+| Section | Content |
+|---------|---------|
+| **Title & ID** | `EPIC-NNN: Descriptive Title` |
+| **Owner** | Person accountable for the epic |
+| **Business Value** | Why this matters to the business (measurable) |
+| **Target Users** | Who benefits from this epic |
+| **Problem Statement** | What problem does this solve |
+| **Success Criteria** | How do we know the epic is done (measurable KPIs) |
+| **Scope** | In scope / out of scope boundaries |
+| **Key Features** | 3-7 high-level features (each becomes a feature doc) |
+| **Dependencies** | External teams, systems, or decisions blocking this |
+| **Risks & Assumptions** | Known risks and assumptions made |
+| **Timeline** | Target quarter/sprint range |
+
+## Constraints
+
+- Each epic should be completable within 1-3 months
+- Limit to 3-7 features per epic; split larger epics
+- Success criteria must be measurable (numbers, percentages, time targets)
+- Review epics at least once per sprint for scope and priority changes
+
+## Breakdown Pattern
+
+```
+Epic (1-3 months)
+├── Feature 1 (1-3 sprints)
+│   ├── User Story 1.1 (1-3 days)
+│   ├── User Story 1.2
+│   └── User Story 1.3
+├── Feature 2
+│   ├── User Story 2.1
+│   └── User Story 2.2
+└── Feature 3
+    └── User Story 3.1
+```
+
+## Related
+- `rules/agile/features.mdc` -- feature definition
+- `rules/agile/user-stories.mdc` -- user story definition
+- `skills/agile-workflow/` -- agile workflow skill

@@ -1,0 +1,48 @@
+---
+description: Spring Security conventions for authentication, authorization, and HTTP security configuration
+globs: ["**/src/main/java/**/*Security*.java", "**/src/main/java/**/*Auth*.java"]
+alwaysApply: false
+---
+
+# Spring Security
+
+Aligned with Spring Security 7.x / Spring Boot 4.0.x.
+
+## SecurityFilterChain
+- Define security as a `@Bean` returning `SecurityFilterChain`
+- Never extend `WebSecurityConfigurerAdapter` (removed since Spring Security 5.7)
+- Deny by default: `http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated())`
+- Explicitly permit public endpoints: `.requestMatchers("/public/**").permitAll()`
+
+## Authentication
+- Use `AuthenticationManager` with appropriate `AuthenticationProvider`
+- Password encoding: `BCryptPasswordEncoder` or `Argon2PasswordEncoder`
+- Never store plaintext passwords
+- OAuth2 / OIDC for external identity providers
+
+## Authorization
+- Method-level: `@PreAuthorize("hasRole('ADMIN')")`, `@Secured`
+- URL-level: via `SecurityFilterChain` request matchers
+- Principle of least privilege: grant minimum necessary permissions
+
+## CSRF
+- Enabled by default for stateful (session-based) applications
+- Disable only for stateless APIs with token-based auth: `.csrf(csrf -> csrf.disable())`
+
+## CORS
+- Configure explicitly per endpoint or globally
+- Never use `allowedOrigins("*")` in production
+- Specify allowed methods, headers, and credentials
+
+## Headers
+- Spring Security sets secure headers by default
+- Ensure: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`
+- HSTS for HTTPS enforcement
+
+## Session Management
+- Stateless for REST APIs: `.sessionManagement(s -> s.sessionCreationPolicy(STATELESS))`
+- Session fixation protection for stateful apps
+
+## Related
+- `rules/security/application-security.mdc` -- general app security
+- `rules/security/api-security.mdc` -- API security patterns

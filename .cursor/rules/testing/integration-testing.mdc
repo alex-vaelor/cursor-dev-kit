@@ -1,0 +1,36 @@
+---
+description: Java integration testing rules for Testcontainers, database testing, and external service testing
+globs: ["**/src/test/**/*IntegrationTest.java", "**/src/test/**/*IT.java"]
+alwaysApply: false
+---
+
+# Integration Testing
+
+## Testcontainers
+- Use Testcontainers for database, message broker, and service dependencies
+- `@Testcontainers` + `@Container` annotations
+- Share expensive containers via `static` fields
+- Clean up: Testcontainers handles lifecycle automatically
+
+## Database Testing
+- Test against real database engine (PostgreSQL, MySQL via Testcontainers)
+- Verify schema migrations (Flyway) execute correctly
+- Test repository methods with realistic data
+- Clean state between tests: `@Transactional` rollback or truncation
+
+## External Services
+- Stub HTTP APIs with WireMock
+- Verify expected outbound requests
+- Test error scenarios: timeouts, 500s, malformed responses
+
+## Test Data
+- Minimal but realistic test fixtures
+- Test data builders for consistent object creation
+- Avoid sharing test data across test classes
+
+## Naming
+- `*IntegrationTest.java` or `*IT.java`
+- Run separately with Maven Failsafe plugin
+
+## Related
+- Deep guidance: `skills/java-testing/references/integration-testing.md`

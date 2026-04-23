@@ -1,0 +1,73 @@
+---
+description: Architecture Decision Records (ADR) creation and management -- MADR template, decision lifecycle, and documentation standards
+globs: ["**/docs/adr/**", "**/docs/architecture/**", "**/ADR-*.md"]
+alwaysApply: false
+---
+
+# Architecture Decision Records
+
+## Purpose
+
+ADRs document significant architecture decisions with context, options considered, and rationale. They create a decision log for future team members and prevent re-debating settled decisions.
+
+## When to Write an ADR
+
+- Technology or framework selection
+- Architectural pattern adoption (CQRS, event sourcing, microservices)
+- Data store or messaging system choice
+- API strategy changes (REST vs gRPC, versioning)
+- Cross-cutting concern decisions (auth, logging, caching)
+- Infrastructure or deployment strategy changes
+
+## Template (MADR Format)
+
+```markdown
+# ADR-NNN: Title
+
+## Status
+Proposed | Accepted | Deprecated | Superseded by ADR-NNN
+
+## Context
+What is the issue or force driving this decision?
+
+## Decision Drivers
+- Driver 1
+- Driver 2
+
+## Considered Options
+1. Option A
+2. Option B
+3. Option C
+
+## Decision Outcome
+Chosen option: "Option B", because [justification].
+
+### Positive Consequences
+- Benefit 1
+- Benefit 2
+
+### Negative Consequences
+- Trade-off 1
+- Trade-off 2
+
+## Links
+- Related ADR: [ADR-NNN](./ADR-NNN.md)
+```
+
+## File Organization
+
+- Store in `docs/adr/` directory
+- Sequential numbering: `ADR-001-use-spring-boot.md`
+- Status field tracks lifecycle: Proposed -> Accepted -> Deprecated/Superseded
+- Never delete ADRs; mark as Deprecated or Superseded with a link to the replacement
+
+## Constraints
+
+- Keep ADRs concise (1-2 pages maximum)
+- Include at least 2 considered options with trade-offs
+- Link to related ADRs when decisions interact
+- Review ADRs during architecture reviews
+
+## Related
+- Deep guidance: `skills/architecture-design/`
+- Templates: `templates/adr-template.md`

@@ -1,0 +1,75 @@
+---
+description: Database migration rules -- Flyway conventions, migration file structure, versioning, rollback strategy, and zero-downtime migration patterns
+globs: ["**/db/migration/**", "**/src/main/resources/db/**", "**/*.sql"]
+alwaysApply: false
+---
+
+# Database Migrations
+
+Tool: **Flyway 10.x** (primary), Liquibase as alternative.
+
+## File Naming
+
+```
+V<version>__<description>.sql    -- versioned migrations
+R__<description>.sql             -- repeatable migrations (views, functions)
+```
+
+- Version format: `V1__`, `V2__`, or timestamp-based `V20260422120000__`
+- Description: lowercase with underscores: `V3__add_customer_email_index.sql`
+- Never reuse or modify a version number after it has been applied
+
+## Migration Rules
+
+- One concern per migration file
+- Migrations must be idempotent where possible (`IF NOT EXISTS`, `IF EXISTS`)
+- Always test migrations on a copy of production data before deploying
+- Keep migrations small and fast; avoid locking large tables
+- Include both DDL and necessary DML in the same migration when related
+
+## Zero-Downtime Patterns
+
+### Add Column
+1. Add column as nullable (no lock)
+2. Deploy application that writes to new column
+3. Backfill existing rows (batched)
+4. Add NOT NULL constraint once backfilled
+
+### Remove Column
+1. Stop application from reading the column
+2. Deploy application changes
+3. Drop column in a subsequent migration
+
+### Rename Column
+1. Add new column
+2. Dual-write to both columns
+3. Backfill old -> new
+4. Switch reads to new column
+5. Drop old column
+
+## Spring Boot Integration
+
+```yaml
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+```
+
+- Store migrations in `src/main/resources/db/migration/`
+- Use `baseline-on-migrate: true` only for brownfield projects
+- Validate migrations in CI with `flyway:validate`
+
+## Constraints
+
+- Never modify an already-applied migration
+- Never delete a migration that has been applied to any environment
+- Always version-control migrations alongside application code
+- Run `flyway:validate` in CI to detect tampering
+
+## Related
+- `rules/sql/database-design.mdc` -- schema design conventions
+- `rules/spring/migrations.mdc` -- Spring-specific migration patterns
+- `skills/spring-data-access/` -- data access skill

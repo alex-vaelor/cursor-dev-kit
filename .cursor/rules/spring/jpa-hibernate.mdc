@@ -1,0 +1,192 @@
+---
+description: JPA and Hibernate conventions -- entity design, relationship mapping, fetch strategies, repository patterns, transactions, Hibernate configuration, and anti-patterns
+globs: ["**/src/main/java/**/*Entity*.java", "**/src/main/java/**/*Repository*.java", "**/src/main/java/**/*Service*.java", "**/application*.yml", "**/application*.yaml"]
+alwaysApply: false
+---
+
+# JPA / Hibernate
+
+Aligned with Spring Boot 4.0.x / Hibernate ORM 7.0.x / Jakarta JPA 3.2.
+
+## Entity Design
+
+### Field Access
+- Prefer field-based access (annotations on fields, not getters)
+- Hibernate proxies work with field access; getter-based access requires careful proxy handling
+
+### Identity and Equality
+```java
+@Entity
+@Table(name = "orders")
+@Getter @Setter
+public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 36)
+    private String orderNumber;
+
+    @Version
+    private Long version;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Order other)) return false;
+        return orderNumber != null && orderNumber.equals(other.orderNumber);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(orderNumber);
+    }
+}
+```
+- **ALWAYS** implement `equals`/`hashCode` on a natural/business key, not `@Id` alone
+- `@Id`-based equality breaks for new (transient) entities before `persist()`
+- Use `instanceof` (not `getClass()`) to support Hibernate proxies
+
+### Optimistic Locking
+- **ALWAYS** add `@Version` to entities modified concurrently
+- Handle `OptimisticLockException` with a retry or user notification
+
+### Lombok on Entities
+- `@Getter` / `@Setter` -- allowed on entities
+- **NEVER** `@Data` -- generates `equals`/`hashCode` using all fields including lazy collections
+- **NEVER** `@ToString` with lazy associations -- triggers unintended loading
+- `@Builder` -- avoid on entities; use for DTOs only
+
+## Relationship Mapping
+
+### Conventions
+| Relationship | Owner Side | Inverse Side | Default Fetch |
+|-------------|-----------|--------------|---------------|
+| `@ManyToOne` | The "many" side (FK column) | -- | `EAGER` (override to `LAZY`) |
+| `@OneToMany` | -- | `mappedBy` | `LAZY` |
+| `@ManyToMany` | Either side (pick one) | `mappedBy` | `LAZY` |
+| `@OneToOne` | FK holder | `mappedBy` | `EAGER` (override to `LAZY`) |
+
+### Bidirectional Helper Methods
+```java
+@Entity
+public class Order {
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
+
+    public void addItem(OrderItem item) {
+        items.add(item);
+        item.setOrder(this);
+    }
+
+    public void removeItem(OrderItem item) {
+        items.remove(item);
+        item.setOrder(null);
+    }
+}
+```
+
+### CascadeType Rules
+| Cascade | Use When |
+|---------|----------|
+| `CascadeType.ALL` + `orphanRemoval = true` | Parent owns children exclusively (Order -> OrderItems) |
+| `CascadeType.PERSIST`, `MERGE` | Parent creates/updates children but doesn't delete independently |
+| **NONE** (default) | Independent lifecycle (Order -> Customer) |
+
+**NEVER** cascade from child to parent or across aggregate boundaries.
+
+## Fetch Strategies
+
+### Default: LAZY Everything
+```java
+@ManyToOne(fetch = FetchType.LAZY) // override EAGER default
+private Customer customer;
+
+@OneToMany(mappedBy = "order", fetch = FetchType.LAZY) // already default
+private List<OrderItem> items;
+```
+
+### Loading Strategies
+| Strategy | When to Use |
+|----------|------------|
+| **JOIN FETCH** (JPQL) | Known query, specific use case |
+| **`@EntityGraph`** | Declarative, reusable across queries |
+| **`@BatchSize`** | Collection loaded in loop (reduces N+1 to N/batch) |
+| **DTO Projection** | Read-only views (best performance) |
+
+## Repository Conventions
+
+```java
+public interface OrderRepository extends JpaRepository<Order, Long>,
+    JpaSpecificationExecutor<Order> {
+
+    // Derived query
+    List<Order> findByStatusAndCustomerId(OrderStatus status, Long customerId);
+
+    // JPQL with JOIN FETCH
+    @Query("SELECT o FROM Order o JOIN FETCH o.items WHERE o.id = :id")
+    Optional<Order> findByIdWithItems(@Param("id") Long id);
+
+    // Modifying query (bulk update)
+    @Modifying
+    @Query("UPDATE Order o SET o.status = :status WHERE o.id IN :ids")
+    int updateStatusByIds(@Param("status") OrderStatus status, @Param("ids") List<Long> ids);
+
+    // Native query
+    @Query(value = "SELECT * FROM orders WHERE created_at > :since", nativeQuery = true)
+    List<Order> findRecentOrders(@Param("since") Instant since);
+}
+```
+
+- One repository per aggregate root
+- `JpaRepository` for full CRUD + paging
+- `JpaSpecificationExecutor` for dynamic queries
+- `@Modifying` with `clearAutomatically = true` if subsequent reads in same transaction
+
+## Transactions
+
+- `@Transactional` on **service methods**, never on repositories
+- `@Transactional(readOnly = true)` at class level for read-heavy services; override with `@Transactional` on write methods
+- Keep transactions short; do not hold across remote calls
+- `Propagation.REQUIRES_NEW` for audit logs that must survive rollback
+
+## Hibernate Configuration
+
+```yaml
+spring:
+  jpa:
+    open-in-view: false          # ALWAYS disable in production
+    hibernate:
+      ddl-auto: validate         # production: validate; dev: update; CI: create-drop
+    properties:
+      hibernate:
+        default_batch_fetch_size: 25
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false # enable temporarily for debugging
+    show-sql: false               # use logging.level.org.hibernate.SQL=DEBUG instead
+```
+
+### Naming Strategy
+Spring Boot defaults to `SpringPhysicalNamingStrategy` (camelCase -> snake_case). Keep this default.
+
+## Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|-------------|---------|-----|
+| `FetchType.EAGER` on any association | Loads entire object graph | Default to `LAZY`; fetch explicitly |
+| `@Data` on entities | Broken `equals`/`hashCode`, lazy loading issues | `@Getter`/`@Setter` + manual `equals`/`hashCode` |
+| `spring.jpa.open-in-view: true` | Lazy loading in controllers, N+1 in views | Disable; use JOIN FETCH or DTOs |
+| Exposing entities in API responses | Tight coupling, security risk, lazy loading errors | Use record DTOs + MapStruct |
+| Business logic in repositories | Hard to test, violates SRP | Keep in service layer |
+| `ddl-auto: update` in production | Uncontrolled schema changes | Use Flyway; set `validate` |
+| No `@Version` on mutable entities | Lost updates under concurrency | Add `@Version` field |
+| `CascadeType.ALL` across aggregates | Unintended deletes across boundaries | Cascade within aggregate only |
+
+## Related
+
+- Deep guidance: `skills/spring-jpa-patterns/`
+- Data access: `rules/spring/data-access.mdc`
+- Validation: `rules/spring/validation.mdc`

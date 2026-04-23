@@ -1,0 +1,54 @@
+---
+description: Agile planning rules -- sprint planning, plan mode workflow, estimation, backlog management, and structured implementation plans
+globs: ["**/.cursor/plans/**", "**/docs/plans/**"]
+alwaysApply: false
+---
+
+# Agile Planning
+
+## Plan Mode Workflow
+
+When creating implementation plans in Cursor Plan mode:
+
+1. **Gather context**: Read existing code, understand constraints, identify affected areas
+2. **Draft plan**: Structure with YAML frontmatter (name, overview, todos, isProject)
+3. **Validate**: Confirm plan scope with the user before implementation
+4. **Execute**: Work through todos sequentially; update status after each task
+5. **Review**: Verify all acceptance criteria after completing the plan
+
+### Plan File Structure
+
+Store plans in `.cursor/plans/`:
+```
+.cursor/plans/YYYY-MM-DD_<plan-name>.plan.md
+```
+
+Required sections: Requirements Summary, Approach (with diagram if applicable), Task List, Execution Instructions, File Checklist, Notes.
+
+## Sprint Planning
+
+- Start with sprint goal: one sentence describing what the sprint delivers
+- Select stories from prioritized backlog that fit sprint capacity
+- Break stories into tasks (2-4 hours each)
+- Identify dependencies between tasks
+- Account for carry-over and tech debt budget (10-20% of capacity)
+
+## Estimation
+
+- Use story points (Fibonacci: 1, 2, 3, 5, 8, 13)
+- Stories >8 points should be split
+- Estimate in team sessions to calibrate across developers
+- Track velocity over 3+ sprints for predictability
+
+## Backlog Management
+
+- Prioritize by business value / risk / dependencies
+- Groom backlog one sprint ahead (ready stories have acceptance criteria, estimates, and no blockers)
+- Review and reprioritize at least weekly
+- Archive done stories for reference
+
+## Related
+- `rules/agile/epics.mdc` -- epic definition
+- `rules/agile/features.mdc` -- feature definition
+- `rules/agile/user-stories.mdc` -- user story definition
+- `skills/project-planning/` -- planning skill

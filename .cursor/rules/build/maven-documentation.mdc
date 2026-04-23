@@ -1,0 +1,25 @@
+---
+description: Maven documentation and reporting conventions for site generation, Javadoc, and project metadata
+globs: ["**/pom.xml"]
+alwaysApply: false
+---
+
+# Maven Documentation
+
+## Project Metadata
+- `<name>`, `<description>`, `<url>` in every POM
+- `<developers>` and `<licenses>` in root POM
+- `<scm>` pointing to the repository
+
+## Javadoc Plugin
+- Configure `maven-javadoc-plugin` in `<reporting>` section
+- Fail on warnings for public API modules: `<failOnWarnings>true</failOnWarnings>`
+- Link to external Javadoc: `<links>` for JDK, Spring, Jakarta
+
+## Site Generation
+- `maven-site-plugin` for project documentation site
+- Include: project info, dependency reports, Javadoc, test reports, coverage
+- JaCoCo report integration for coverage visualization
+
+## Related
+- Deep guidance: `skills/maven-build/references/documentation.md`

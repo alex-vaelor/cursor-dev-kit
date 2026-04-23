@@ -1,0 +1,143 @@
+---
+description: GitHub CLI usage, GitHub Actions patterns, issue and PR management, and API conventions
+globs: ["**/.github/**", "**/.github/workflows/**"]
+alwaysApply: false
+---
+
+# GitHub
+
+## GitHub CLI (`gh`)
+
+Use `gh` as the primary tool for GitHub operations. Prefer `gh` over the web UI for scriptable, reproducible workflows.
+
+### Common Operations
+
+```bash
+# Pull Requests
+gh pr create --title "feat: add auth" --body "Description"
+gh pr list --state open
+gh pr view 42
+gh pr merge 42 --squash --delete-branch
+gh pr checks 42
+gh pr review 42 --approve
+
+# Issues
+gh issue create --title "Bug: login fails" --body "Steps to reproduce..."
+gh issue list --label bug --state open
+gh issue close 42 --reason completed
+
+# Runs (CI/CD)
+gh run list --limit 5
+gh run view 12345
+gh run watch 12345
+gh run rerun 12345 --failed
+
+# Repository
+gh repo view --json name,defaultBranchRef
+gh api repos/{owner}/{repo}/branches/main/protection
+```
+
+### JSON Output for Scripting
+
+```bash
+gh pr list --json number,title,author,reviewDecision --jq '.[] | select(.reviewDecision == "APPROVED")'
+gh issue list --json number,title,labels --jq '.[] | select(.labels | map(.name) | index("bug"))'
+```
+
+### CI Debugging Sequence
+
+When CI fails:
+1. `gh pr checks <number>` -- identify which check failed
+2. `gh run view <run-id> --log-failed` -- read the failure logs
+3. Fix locally, push, and verify with `gh run watch`
+
+## GitHub Actions Basics
+
+### Workflow Triggers
+
+| Trigger | Use Case |
+|---------|----------|
+| `push` | Run on every push to specific branches |
+| `pull_request` | Run on PR events (opened, synchronize, reopened) |
+| `schedule` | Cron-based recurring jobs |
+| `workflow_dispatch` | Manual trigger with optional inputs |
+| `release` | Run on release creation |
+
+### Key Practices
+
+- Pin action versions to full SHA, not just major version
+- Use `concurrency` to cancel superseded workflow runs on the same branch
+- Cache dependencies (Maven, npm, pip) to speed up builds
+- Use matrix builds for multi-version testing
+- Store secrets in GitHub Secrets, never in workflow files
+- Use `GITHUB_TOKEN` permissions at the minimum required level
+
+### Reusable Workflows
+
+```yaml
+# .github/workflows/reusable-test.yml
+name: Reusable Test
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: temurin
+      - run: ./mvnw verify
+```
+
+## Issue Management
+
+### Issue Templates
+
+Use issue templates (`.github/ISSUE_TEMPLATE/`) to enforce structure:
+- Bug reports: reproduction steps, expected vs actual, environment
+- Feature requests: problem, proposed solution, alternatives
+- Tasks: acceptance criteria, dependencies
+
+### Labels
+
+Maintain a consistent label taxonomy:
+
+| Category | Labels |
+|----------|--------|
+| Type | `bug`, `feature`, `enhancement`, `docs`, `chore` |
+| Priority | `P0-critical`, `P1-high`, `P2-medium`, `P3-low` |
+| Status | `needs-triage`, `in-progress`, `blocked`, `ready-for-review` |
+| Area | `api`, `auth`, `database`, `frontend`, `infra` |
+
+## Branch Protection via API
+
+```bash
+gh api repos/{owner}/{repo}/branches/main/protection \
+  --method PUT \
+  --field required_status_checks='{"strict":true,"contexts":["build","test"]}' \
+  --field enforce_admins=true \
+  --field required_pull_request_reviews='{"required_approving_review_count":1}' \
+  --field restrictions=null
+```
+
+## CODEOWNERS
+
+Place `.github/CODEOWNERS` to auto-assign reviewers:
+
+```
+# Default owner for everything
+* @team-lead
+
+# Specific paths
+/src/auth/     @security-team
+/docs/         @docs-team
+/infra/        @platform-team
+*.sql          @dba-team
+```

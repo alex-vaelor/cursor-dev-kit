@@ -1,0 +1,55 @@
+---
+description: Project-wide conventions for naming, structure, file organization, and consistency
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Project Conventions
+
+## Naming
+
+- Directories: kebab-case (`user-service`, `api-gateway`)
+- Java packages: lowercase dot-separated (`com.example.auth`)
+- Java classes: PascalCase (`UserService`, `OrderRepository`)
+- Java methods/variables: camelCase (`findByEmail`, `isActive`)
+- Constants: UPPER_SNAKE_CASE (`MAX_RETRIES`, `DEFAULT_TIMEOUT_MS`)
+- Config files: kebab-case (`application-dev.yml`)
+- SQL: snake_case for tables and columns (`user_account`, `created_at`)
+
+## Project Structure
+
+```
+src/
+  main/
+    java/         # Application source code
+    resources/    # Config files, templates, static resources
+  test/
+    java/         # Test source code
+    resources/    # Test fixtures, configs
+docs/             # Project documentation
+.github/          # GitHub templates and workflows
+```
+
+## File Organization
+
+- One public class per file
+- Group by feature/domain, not by technical layer
+- Keep related files close together
+- Configuration in `resources/`, never hardcoded
+- Tests mirror the source structure
+
+## Code Style
+
+- Maximum line length: 120 characters
+- Use project formatter (EditorConfig, Checkstyle, or IDE settings)
+- No trailing whitespace
+- Files end with a newline
+- UTF-8 encoding everywhere
+- Consistent import ordering: standard library, third-party, project
+
+## Dependencies
+
+- Pin dependency versions explicitly (no dynamic ranges)
+- Use BOM/dependency management for version consistency
+- Review new dependencies for license compatibility and maintenance status
+- Prefer well-maintained libraries with active communities

@@ -1,0 +1,57 @@
+---
+description: Modern Java feature usage guidance for Java 17/21 including records, sealed classes, pattern matching, and text blocks
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Modern Java Features
+
+## Records (Java 16+)
+- Use for immutable data carriers: DTOs, value objects, configuration holders
+- Prefer compact constructors for validation
+- Do not add mutable fields, setters, or excessive logic
+- Records may implement interfaces but cannot extend classes
+
+## Sealed Classes (Java 17+)
+- Model closed type hierarchies: `sealed class Shape permits Circle, Rectangle`
+- All permitted subclasses must be `final`, `sealed`, or `non-sealed`
+- Enables exhaustive `switch` -- compiler verifies all subtypes handled
+- Keep subclasses in the same package or same file for small hierarchies
+
+## Pattern Matching
+- `instanceof` pattern (Java 16+): `if (obj instanceof String s)` -- eliminates explicit cast
+- Switch pattern (Java 21): use for type-safe dispatch over sealed hierarchies
+- Record patterns (Java 21): `case Point(int x, int y)` for destructuring
+- Guard clauses in switch: `case String s when s.length() > 10`
+
+## Modern Switch
+- Arrow syntax (`->`) for all new switch statements and expressions
+- Switch expressions return values -- assign or return directly
+- Exhaustive switch over sealed types and enums (no default needed when all cases covered)
+
+## Text Blocks
+- Use `"""` for multi-line strings (SQL, JSON, HTML templates)
+- Mind trailing whitespace with `\s` escape or `.stripIndent()`
+
+## Local Variable Type Inference
+- `var` only when the type is obvious from the right-hand side
+- Do not use `var` for diamond inference ambiguity or method return types that are unclear
+
+## Sequenced Collections (Java 21)
+- `SequencedCollection`: `getFirst()`, `getLast()`, `reversed()`
+- `SequencedMap`: `firstEntry()`, `lastEntry()`, `sequencedKeySet()`
+- Prefer over index-based access (`list.get(0)`, `list.get(list.size()-1)`)
+
+## Data-Oriented Programming
+- Combine sealed interfaces + records + pattern matching for algebraic data types
+- Model domain events and commands as sealed hierarchies of records
+- Exhaustive switch for processing -- compiler ensures completeness
+
+## Anti-Patterns
+- Do not use records as mutable containers
+- Do not reflexively add `default` to switches over sealed types (defeats exhaustiveness checking)
+- Do not use `var` everywhere -- readability is the priority
+
+## Related
+- Deep guidance: `skills/java-modern-features/`
+- Refactoring: `skills/java-modern-features/references/refactoring-to-modern-java.md`

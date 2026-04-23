@@ -1,0 +1,40 @@
+---
+description: Spring Boot acceptance testing conventions for end-to-end API and contract testing
+globs: ["**/src/test/**/*AcceptanceTest.java", "**/src/test/**/*AT.java"]
+alwaysApply: false
+---
+
+# Spring Boot Acceptance Testing
+
+## End-to-End API Tests
+- Full application context with `@SpringBootTest(webEnvironment = RANDOM_PORT)`
+- Test complete user workflows through the API
+- Use `WebTestClient` or REST Assured for HTTP interactions
+
+## Scope
+- Test business scenarios end-to-end (create -> read -> update -> delete)
+- Verify error scenarios and edge cases at the API boundary
+- Test authentication and authorization flows
+
+## External Dependencies
+- All external services stubbed with WireMock or Testcontainers
+- Database: real instance via Testcontainers
+- Message brokers: Testcontainers (Kafka, RabbitMQ)
+
+## Test Organization
+- Suffix: `*AcceptanceTest.java` or `*AT.java`
+- Group by feature/domain, not by endpoint
+- Each test class covers a complete feature scenario
+
+## Data Management
+- Clean state before each test (truncate or recreate)
+- Use test-specific data builders for realistic fixtures
+- Avoid depending on test execution order
+
+## Assertions
+- Verify HTTP status codes, response bodies, headers
+- Verify side effects: database state, sent messages, audit logs
+- Use JSON path assertions for response structure
+
+## Related
+- Deep guidance: `skills/spring-boot-testing/references/acceptance-testing.md`

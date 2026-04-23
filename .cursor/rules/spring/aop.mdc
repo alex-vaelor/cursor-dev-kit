@@ -1,0 +1,118 @@
+---
+description: Spring AOP conventions -- aspect placement, pointcut expressions, advice ordering, common cross-cutting concerns, proxy limitations, and testing aspects
+globs: ["**/src/main/java/**/*Aspect*.java", "**/src/main/java/**/*Interceptor*.java"]
+alwaysApply: false
+---
+
+# Spring AOP
+
+## When to Use AOP
+- **Logging**: Method entry/exit, execution timing
+- **Metrics**: Micrometer counters and timers on service methods
+- **Auditing**: Track who did what and when
+- **Security**: Additional authorization checks beyond `@PreAuthorize`
+- **Transaction management**: Already handled by `@Transactional` (built-in AOP)
+- **Exception translation**: Wrap infrastructure exceptions into domain exceptions
+
+## When NOT to Use AOP
+- **Business logic**: Never place domain rules in aspects
+- **Flow control**: Never use aspects to alter method return values for business reasons
+- **Data transformation**: Use MapStruct or explicit mapping instead
+
+## Aspect Structure
+```java
+@Aspect
+@Component
+@Slf4j
+public class PerformanceMonitoringAspect {
+
+    private final MeterRegistry meterRegistry;
+
+    public PerformanceMonitoringAspect(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
+
+    @Around("@annotation(com.example.Timed)")
+    public Object measureExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
+        var timer = Timer.start(meterRegistry);
+        try {
+            return joinPoint.proceed();
+        } finally {
+            timer.stop(Timer.builder("method.execution")
+                .tag("class", joinPoint.getTarget().getClass().getSimpleName())
+                .tag("method", joinPoint.getSignature().getName())
+                .register(meterRegistry));
+        }
+    }
+}
+```
+
+## Pointcut Conventions
+- Prefer annotation-based pointcuts (`@annotation(...)`) over package-based for clarity
+- Keep pointcut expressions in named methods for reuse:
+```java
+@Pointcut("within(@org.springframework.stereotype.Service *)")
+public void serviceLayer() {}
+
+@Pointcut("execution(public * com.example..service..*(..))")
+public void servicePackage() {}
+```
+- Never use `execution(* *(..))` -- too broad, impacts everything
+
+## Advice Ordering
+When multiple aspects apply to the same join point, use `@Order`:
+```java
+@Aspect @Order(1) // runs first (outermost)
+public class SecurityAspect { }
+
+@Aspect @Order(2)
+public class LoggingAspect { }
+
+@Aspect @Order(3) // runs last (innermost)
+public class MetricsAspect { }
+```
+
+## Proxy Limitations
+- Spring AOP uses JDK dynamic proxies (interfaces) or CGLIB proxies (classes)
+- **Self-invocation**: Calling `this.method()` bypasses the proxy; the aspect will NOT apply
+  - Fix: Inject the bean and call through the injected reference, or restructure
+- `private` and `final` methods cannot be advised by CGLIB proxies
+- `@Transactional`, `@Cacheable`, `@Retryable` are all AOP-based and share these limitations
+
+## Anti-Patterns
+| Anti-Pattern | Problem | Fix |
+|-------------|---------|-----|
+| Business logic in aspect | Hidden behavior, hard to debug | Move to service layer |
+| Overly broad pointcut | Unexpected methods advised | Use specific annotations or packages |
+| Exception swallowing in advice | Hides failures | Always rethrow or log at ERROR |
+| Modifying method arguments | Surprising behavior | Aspects should observe, not mutate |
+| Stateful aspects | Thread-safety issues | Keep aspects stateless; inject stateless beans |
+
+## Testing Aspects
+```java
+@SpringBootTest
+class PerformanceMonitoringAspectTest {
+    @Autowired
+    private OrderService orderService; // proxied
+
+    @Autowired
+    private MeterRegistry meterRegistry;
+
+    @Test
+    void shouldRecordTimerMetric() {
+        orderService.createOrder(request);
+        var timer = meterRegistry.find("method.execution")
+            .tag("method", "createOrder").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
+    }
+}
+```
+
+## Configuration
+```java
+@Configuration
+@EnableAspectJAutoProxy
+public class AopConfig { }
+```
+Spring Boot auto-enables `@EnableAspectJAutoProxy` when `spring-boot-starter-aop` is on the classpath.

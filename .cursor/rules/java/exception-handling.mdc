@@ -1,0 +1,59 @@
+---
+description: Java exception handling rules for specific exceptions, resource management, fail-fast validation, and logging discipline
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Exception Handling
+
+## Use Specific Exceptions
+- Throw the most specific exception type: `IllegalArgumentException`, `NoSuchElementException`, not generic `RuntimeException`
+- Create custom domain exceptions for business errors (`InsufficientFundsException`, `OrderNotFoundException`)
+- Custom exceptions should extend `RuntimeException` unless the caller is expected to handle recovery
+
+## Resource Management
+- Always use try-with-resources for `AutoCloseable` resources
+- Attach secondary cleanup failures via `Throwable.addSuppressed()`
+- Never rely on `finalize()` -- it is deprecated and unreliable
+
+## Fail-Fast Validation
+- Validate inputs at method entry: `Objects.requireNonNull(param, "param must not be null")`
+- Throw `IllegalArgumentException` for invalid values, `IllegalStateException` for invalid object state
+- Do not allow invalid state to propagate through the system
+
+## Exception Chaining
+- Always pass the original exception as the cause: `throw new DomainException("msg", cause)`
+- Preserve full stack traces for debugging
+- Translate exceptions at API boundaries using centralized handlers
+
+## Logging Discipline
+- Log at the boundary that decides the response, not at every catch site
+- Never log-and-throw the same exception -- pick one
+- Use structured logging with correlation IDs and error codes
+- Log stack traces at ERROR level only for unexpected failures
+
+## Do Not Catch
+- Never catch `Throwable` or `Error` -- let JVM errors propagate
+- Never catch bare `Exception` in business logic -- catch specific types
+- Never silently swallow exceptions with empty catch blocks
+
+## Interruption
+- `InterruptedException`: propagate or restore with `Thread.currentThread().interrupt()`
+- Never ignore `InterruptedException`
+
+## Async/Reactive Propagation
+- In `CompletableFuture`: use `exceptionally()` or `handle()` for error paths
+- Propagate failures without blocking; honor cancellation semantics
+
+## Retry Policy
+- Retry only idempotent operations
+- Use bounded attempts with exponential backoff and jitter
+- Enforce timeouts on all remote calls
+
+## API Boundary Translation
+- Map internal exceptions to HTTP status codes / Problem Details at controller level
+- Use `@ControllerAdvice` / `@ExceptionHandler` in Spring for centralized mapping
+- Never expose internal stack traces or class names in API responses
+
+## Related
+- Deep guidance: `skills/java-exception-handling/`

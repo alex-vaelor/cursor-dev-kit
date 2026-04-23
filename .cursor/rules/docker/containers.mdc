@@ -1,0 +1,53 @@
+---
+description: General Docker container conventions -- Dockerfile best practices, image optimization, security, Compose patterns, and development workflow (complements java-containers.mdc)
+globs: ["**/Dockerfile*", "**/docker-compose*.yml", "**/docker-compose*.yaml", "**/.dockerignore"]
+alwaysApply: false
+---
+
+# Docker Containers
+
+General Docker conventions. For Java-specific container guidance, see `rules/docker/java-containers.mdc`.
+
+## Dockerfile Best Practices
+
+- Use multi-stage builds: separate build and runtime stages
+- Copy dependency manifests before source code for layer caching
+- Consolidate `RUN` commands to minimize layers
+- Clean up caches in the same `RUN` layer that creates them
+- Always specify a tag for base images (never use `:latest` in production)
+- Include a `.dockerignore` to exclude `.git/`, `target/`, `node_modules/`, `*.log`
+
+## Security
+
+- Run as non-root user: create a user with explicit UID/GID, use `USER` directive
+- Never store secrets in image layers or `ENV` variables
+- Use BuildKit secrets (`--mount=type=secret`) for build-time credentials
+- Scan images for vulnerabilities (`docker scout`, Trivy, Grype)
+- Use minimal base images (Alpine, distroless, scratch)
+- Add `HEALTHCHECK` for container monitoring
+
+## Docker Compose
+
+- Define health checks on all services with `condition: service_healthy` dependencies
+- Use custom networks: internal network for backends, bridge for public-facing services
+- Set resource limits (`deploy.resources.limits`) in production Compose files
+- Externalize secrets using Docker secrets or environment file references
+- Separate `docker-compose.override.yml` for development-specific configuration
+
+## Image Size Optimization
+
+- Use distroless or Alpine base images for production
+- Multi-stage: only copy build artifacts to the final stage
+- Remove build tools, docs, and package manager caches from final image
+- Target: <200MB for Java apps (JRE + app), <100MB for non-JVM apps
+
+## Development Workflow
+
+- Use separate build targets: `development` vs `production`
+- Mount source code as volumes for hot reload in development
+- Expose debug ports only in development compose
+- Match production image structure in CI builds
+
+## Related
+- `rules/docker/java-containers.mdc` -- Java-specific container patterns
+- `skills/docker-containers/` -- Docker containers skill

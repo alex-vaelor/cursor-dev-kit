@@ -1,0 +1,62 @@
+---
+description: Database schema design rules -- normalization, data types, naming conventions, constraints, and migration-friendly design for relational databases
+globs: ["**/*.sql", "**/db/migration/**"]
+alwaysApply: false
+---
+
+# Database Design
+
+## Naming Conventions
+
+- Tables: `snake_case`, plural nouns (`orders`, `order_items`)
+- Columns: `snake_case` (`created_at`, `order_status`)
+- Primary keys: `id` (auto-generated) or `<table>_id` for composite keys
+- Foreign keys: `<referenced_table>_id` (e.g., `customer_id`)
+- Indexes: `idx_<table>_<columns>` (e.g., `idx_orders_customer_id`)
+- Constraints: `pk_<table>`, `fk_<table>_<ref>`, `uq_<table>_<columns>`, `chk_<table>_<rule>`
+- Use lowercase identifiers exclusively (avoids quoting issues across databases)
+
+## Data Types
+
+- Use the most specific type: `BOOLEAN` not `SMALLINT`, `DATE` not `VARCHAR`
+- Timestamps: `TIMESTAMPTZ` (with timezone) for events; `DATE` for calendar dates
+- Money: `NUMERIC(precision, scale)`, never `FLOAT` or `DOUBLE`
+- UUIDs: `UUID` type where supported, otherwise `CHAR(36)`
+- Text: `VARCHAR(n)` with explicit length for bounded fields; `TEXT` for unbounded
+- Enums: Prefer `VARCHAR` with CHECK constraint over database-native ENUMs (easier to migrate)
+
+## Normalization
+
+- Normalize to 3NF as the baseline
+- Denormalize selectively for read performance, document the trade-off
+- Every table must have a primary key
+- Avoid nullable foreign keys where possible; use junction tables instead
+
+## Constraints
+
+- Primary key on every table (non-negotiable)
+- Foreign keys for all relationships with appropriate `ON DELETE` action
+- NOT NULL on columns that must always have a value
+- CHECK constraints for domain rules (e.g., `price > 0`)
+- UNIQUE constraints for business-unique fields (email, SKU)
+- Default values where a sensible default exists
+
+## Migration-Friendly Design
+
+- Prefer additive changes (add column, add table) over destructive changes
+- Add columns as nullable first, backfill, then add NOT NULL constraint
+- Never rename columns in a single migration; use add-migrate-drop pattern
+- Always include `IF NOT EXISTS` / `IF EXISTS` guards
+- Test migrations against a copy of production data
+
+## Anti-Patterns
+
+- Entity-Attribute-Value (EAV) tables -- use JSONB for flexible schemas
+- Single-column primary keys that carry business meaning (use surrogate keys)
+- Polymorphic associations without a discriminator
+- Storing comma-separated values in a single column
+
+## Related
+- `rules/sql/query-optimization.mdc` -- query performance
+- `rules/sql/migrations.mdc` -- migration conventions
+- `rules/spring/data-access.mdc` -- Spring data access

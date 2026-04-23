@@ -1,0 +1,88 @@
+---
+description: Code review process, feedback quality, severity levels, approval criteria, and reviewer responsibilities
+globs: ["**/.github/**"]
+alwaysApply: false
+---
+
+# Code Review Standards
+
+## Purpose
+
+Code review exists to improve quality, share knowledge, and catch defects early. It is not a gatekeeping exercise.
+
+## Reviewer Responsibilities
+
+1. **Understand context first** -- read the PR description and linked issue before looking at code
+2. **Review the design** -- does the approach fit existing patterns? Is the abstraction level right?
+3. **Check correctness** -- logic errors, edge cases, null handling, race conditions
+4. **Evaluate security** -- input validation, auth checks, injection risks, secret exposure
+5. **Assess performance** -- N+1 queries, unnecessary allocations, missing indices
+6. **Verify tests** -- coverage of happy path, edge cases, and error scenarios
+7. **Acknowledge good work** -- praise well-written code, clean patterns, thorough tests
+
+## Feedback Severity Levels
+
+| Level | Tag | Meaning | Author Action |
+|-------|-----|---------|---------------|
+| Critical | `[CRITICAL]` | Security vulnerability, data loss risk, crash | Must fix before merge |
+| Major | `[MAJOR]` | Performance issue, design flaw, missing error handling | Should fix before merge |
+| Minor | `[MINOR]` | Naming, readability, style improvement | Fix at author's discretion |
+| Nit | `[NIT]` | Trivial style preference | No action required |
+| Question | `[QUESTION]` | Clarification needed | Author must respond |
+| Praise | `[PRAISE]` | Positive reinforcement | No action required |
+
+## Feedback Quality Rules
+
+### Must Do
+
+- Be specific: reference file, line, and code snippet
+- Be actionable: suggest a concrete fix or alternative
+- Be constructive: frame as improvement, not criticism
+- Explain the why: "This risks N+1 queries because..." not just "Fix the query"
+- Include code examples when suggesting alternatives
+- Ask questions when intent is unclear rather than assuming
+
+### Must Not Do
+
+- Be condescending or dismissive
+- Block on personal style preferences when a formatter is configured
+- Demand perfection (diminishing returns past "good enough")
+- Review without understanding the PR's purpose
+- Leave generic comments like "fix this" or "looks wrong"
+- Skip positive feedback -- always acknowledge at least one good pattern
+
+## Approval Criteria
+
+| Verdict | Conditions |
+|---------|------------|
+| **Approve** | No critical or major issues. Minor/nit issues only. |
+| **Request Changes** | At least one critical or major issue that must be addressed. |
+| **Comment** | Questions need answers. No blocking issues found yet. |
+
+## Review Time Allocation
+
+| Phase | Time | Focus |
+|-------|------|-------|
+| Context | 10% | PR description, linked issues, branch intent |
+| Architecture | 20% | Design fit, abstractions, patterns |
+| Code details | 40% | Logic, security, performance, error handling |
+| Tests | 20% | Coverage, quality, edge cases |
+| Report | 10% | Summary, positive feedback, final verdict |
+
+## Author Responsibilities After Review
+
+- Respond to every comment (resolve, fix, or explain disagreement)
+- Do not dismiss feedback without explanation
+- Fix critical and major issues before re-requesting review
+- Push back with technical reasoning when you disagree -- not defensiveness
+- Mark resolved conversations after addressing them
+
+## Anti-Patterns
+
+| Pattern | Problem | Better Approach |
+|---------|---------|-----------------|
+| Rubber-stamping | No real review, just approval | Take time; flag at least one observation |
+| Bikeshedding | Debating trivial style endlessly | Defer to formatter/linter, move on |
+| Blocking on nits | Holding merge for cosmetic issues | Approve with nit comments |
+| Review bombing | 50+ comments on one PR | Focus on critical/major; suggest a call for big changes |
+| Silent approval | Approve without any comment | Add a brief note on what looked good |

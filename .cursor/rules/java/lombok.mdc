@@ -1,0 +1,68 @@
+---
+description: Lombok usage rules for Java projects -- when to use Lombok vs records, safe annotation patterns, JPA entity guidelines, and Spring Boot 4 compatibility
+globs: ["**/*.java", "**/lombok.config"]
+alwaysApply: false
+---
+
+# Lombok
+
+Version: Lombok 1.18.44+ required for Spring Boot 4.0.x compatibility.
+
+## When to Use Lombok vs Records
+
+| Use Case | Recommendation | Why |
+|----------|---------------|-----|
+| DTOs, API responses | **Records** | Language-level, no annotation processor needed |
+| Value objects (immutable) | **Records** | Compact constructors for validation |
+| JPA/Hibernate entities | **Lombok** | Entities need no-arg constructor, mutable fields, proxying |
+| Spring service classes | **Lombok `@RequiredArgsConstructor`** | Generates constructor for `final` fields; clean DI |
+| Logging | **Lombok `@Slf4j`** | Eliminates boilerplate logger field |
+| Complex builders | **Lombok `@Builder`** | No language equivalent for multi-optional-parameter builders |
+| Immutable copy methods | **Lombok `@With`** | No Java equivalent for `withField()` copy methods |
+
+## Preferred Annotations
+
+- `@RequiredArgsConstructor` -- for Spring beans with `final` fields (constructor injection)
+- `@Slf4j` -- for logger initialization
+- `@Builder` -- for objects with many optional parameters
+- `@Getter` / `@Setter` -- for JPA entities only (prefer records for everything else)
+- `@With` -- for creating modified copies of immutable objects
+- `@UtilityClass` -- for static utility classes
+
+## Anti-Patterns
+
+- **Never `@Data` on JPA entities** -- generates `equals`/`hashCode` that trigger lazy loading and break entity identity; use `@Getter`/`@Setter` + manual `equals` based on business key
+- **Never `@Value` for new code** -- prefer records (language-level equivalent)
+- **Never `@AllArgsConstructor` on Spring beans** -- use `@RequiredArgsConstructor` with `final` fields
+- **Avoid `@ToString` on entities with relationships** -- causes `LazyInitializationException` and circular references; use `@ToString(exclude = {"relatedEntities"})`
+- **Avoid `@EqualsAndHashCode` on entities** -- use business key or database ID only
+- **Never `@SneakyThrows`** -- hides checked exceptions, defeats exception handling discipline
+
+## Project Configuration
+
+Every project using Lombok must have a `lombok.config` in the project root:
+
+```
+config.stopBubbling = true
+lombok.addLombokGeneratedAnnotation = true
+lombok.extern.findbugs.addSuppressFBWarnings = true
+```
+
+- `addLombokGeneratedAnnotation` ensures JaCoCo excludes generated code from coverage
+- `addSuppressFBWarnings` prevents SpotBugs false positives on generated code
+
+## Maven Configuration
+
+```xml
+<dependency>
+  <groupId>org.projectlombok</groupId>
+  <artifactId>lombok</artifactId>
+  <scope>provided</scope>
+</dependency>
+```
+
+Pin via Spring Boot BOM or explicit `<version>1.18.44</version>`.
+
+## Related
+- `shared/java-conventions.md` -- Lombok section
+- `rules/java/coding-standards.mdc` -- when records are preferred

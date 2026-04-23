@@ -1,0 +1,76 @@
+---
+description: Git branching strategy, merge rules, and branch lifecycle management
+globs: ["**/.git/**", "**/.github/**"]
+alwaysApply: false
+---
+
+# Git Workflow
+
+## Branching Strategy
+
+Use **trunk-based development** as the default strategy. The `main` branch is always deployable.
+
+### Branch Types
+
+| Branch | Pattern | Lifetime | Merges Into |
+|--------|---------|----------|-------------|
+| Main | `main` | Permanent | -- |
+| Feature | `feature/<id>-<desc>` | Days | `main` |
+| Bugfix | `bugfix/<id>-<desc>` | Days | `main` |
+| Hotfix | `hotfix/<id>-<desc>` | Hours | `main` + release |
+| Release | `release/<version>` | Days | `main` |
+| Chore | `chore/<desc>` | Days | `main` |
+
+### Branch Lifecycle
+
+1. Create branch from latest `main`
+2. Develop in small, atomic commits
+3. Rebase onto `main` before opening PR (keep linear history)
+4. Open PR, pass CI, get review approval
+5. Squash-merge into `main` (or merge commit for multi-commit features)
+6. Delete the branch after merge
+
+### Rules
+
+- Never commit directly to `main` or `master`
+- Keep feature branches short-lived (< 3 days preferred)
+- Rebase feature branches onto `main` daily to avoid drift
+- Delete merged branches immediately
+- Use `--force-with-lease` instead of `--force` when pushing rebased branches
+- Create a backup branch before complex rebases
+
+## Merge Strategies
+
+| Strategy | When to Use |
+|----------|-------------|
+| **Squash merge** | Single-feature PRs, cleanup messy history |
+| **Merge commit** | Multi-commit PRs where individual commits are meaningful |
+| **Rebase** | Keeping feature branch current with `main` (local only) |
+| **Fast-forward** | Simple, linear changes with clean commit history |
+
+### Merge Rules
+
+- Squash merge is the default for feature branches
+- Never rebase commits that have been pushed to a shared branch
+- Merge commits are acceptable for release branches into `main`
+- Always verify CI passes before merging
+
+## Protected Branches
+
+The `main` branch must have these protections enabled:
+
+- Require pull request before merging
+- Require at least 1 approval
+- Require status checks to pass (CI/build/test)
+- Require branches to be up to date before merging
+- Do not allow force pushes
+- Do not allow branch deletion
+
+## Monorepo Considerations
+
+When working in a monorepo:
+
+- Use path-scoped CI triggers to avoid running all checks on every change
+- Include the module/service name in branch names: `feature/auth-service/add-oauth`
+- Use CODEOWNERS to assign reviewers per path
+- Tag releases per service: `auth-service/v1.2.0`

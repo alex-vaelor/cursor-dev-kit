@@ -1,0 +1,109 @@
+---
+description: Spring data access conventions for Spring JDBC, Spring Data JDBC, repository design, and query patterns
+globs: ["**/src/main/java/**/*Repository*.java", "**/src/main/java/**/*Dao*.java", "**/src/main/resources/schema*.sql"]
+alwaysApply: false
+---
+
+# Spring Data Access
+
+Aligned with Spring Boot 4.0.x / Spring Data 2026.x.
+
+## Prefer Spring Data JDBC over JPA
+- Simpler model: no lazy loading, no dirty checking, no session cache
+- Aggregate-root design: one repository per aggregate root
+- Explicit SQL when needed via `@Query`
+
+## Repository Design
+- One repository per aggregate root
+- Spring Data JDBC repositories extend `CrudRepository` or `ListCrudRepository`
+- Custom queries: `@Query` annotation with named parameters
+- Projections for read-only views
+
+## Spring JDBC (JdbcClient)
+- Use `JdbcClient` (Spring Framework 6.1+ / 7.x) for programmatic SQL
+- Named parameters: `:paramName` -- never string concatenation
+- `RowMapper` implementations for result mapping
+
+## Transactions
+- `@Transactional` on service methods, not on repositories
+- Read-only transactions: `@Transactional(readOnly = true)`
+- Keep transactions short -- do not hold across remote calls
+
+## Migrations
+- Flyway for schema versioning
+- Migration files: `V{version}__{description}.sql` in `src/main/resources/db/migration/`
+- Never modify existing migration files; create new ones
+
+## Redis / Spring Data Redis
+Use for caching, session storage, rate limiting, and pub/sub messaging.
+
+### Connection (Lettuce)
+```yaml
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+```
+
+### RedisTemplate
+```java
+@Bean
+public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+    var template = new RedisTemplate<String, Object>();
+    template.setConnectionFactory(factory);
+    template.setKeySerializer(new StringRedisSerializer());
+    template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+    return template;
+}
+```
+
+### Spring Data Redis Repository
+```java
+@RedisHash(value = "sessions", timeToLive = 1800)
+public record UserSession(
+    @Id String sessionId,
+    String userId,
+    Instant createdAt
+) {}
+
+public interface UserSessionRepository extends CrudRepository<UserSession, String> {}
+```
+
+### Cache Backend
+Configure Redis as Spring Cache backend -- see `rules/spring/retry-cache.mdc`.
+
+### Testing with Testcontainers
+```java
+@Testcontainers
+@SpringBootTest
+class RedisIntegrationTest {
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
+        .withExposedPorts(6379);
+
+    @DynamicPropertySource
+    static void redisProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+    }
+}
+```
+
+### Anti-Patterns
+- Storing large objects in Redis (keep values small, <1MB)
+- Missing TTL on all keys (unbounded growth)
+- JDK serialization for Redis values (use JSON -- human-readable, cross-language)
+
+## Anti-Patterns
+- N+1 queries: use joins or batch fetching
+- Direct entity exposure in API responses: use DTOs
+- Business logic in repositories: keep in service layer
+
+## Related
+- Deep guidance: `skills/spring-data-access/`

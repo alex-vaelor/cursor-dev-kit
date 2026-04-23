@@ -1,0 +1,50 @@
+---
+description: Architecture diagram conventions -- C4 model levels, UML diagrams, PlantUML syntax, and diagram-as-code practices
+globs: ["**/*.puml", "**/*.plantuml", "**/docs/diagrams/**"]
+alwaysApply: false
+---
+
+# Architecture Diagrams
+
+## C4 Model
+
+Use the C4 model for progressive architecture visualization:
+
+| Level | Name | Shows | Audience |
+|-------|------|-------|----------|
+| 1 | Context | System + external actors | Everyone |
+| 2 | Container | Applications, databases, message brokers | Technical leads |
+| 3 | Component | Major components within a container | Developers |
+| 4 | Code | Class-level detail | Do NOT generate (use IDE) |
+
+### Rules
+- Always start with Level 1 (Context) before diving deeper
+- Never generate Level 4 diagrams -- use IDE class diagrams instead
+- Each container should map to a deployable unit
+- Label all relationships with protocol and purpose
+
+## Diagram Types
+
+| Type | Use For | Tool |
+|------|---------|------|
+| C4 Context/Container/Component | System architecture | PlantUML + C4-PlantUML |
+| Sequence diagram | API flows, service interactions | PlantUML |
+| Class diagram | Domain model, type hierarchies | PlantUML |
+| ER diagram | Database schema | PlantUML (Chen notation) |
+| State machine | Entity lifecycle, workflow states | PlantUML |
+
+## PlantUML Conventions
+
+- Store diagrams as `.puml` files in `docs/diagrams/`
+- Use `!include` for shared styles and C4 macros
+- Add `title`, `footer`, and version info to every diagram
+- Keep diagrams focused: one concern per diagram file
+
+## Naming
+
+- `c4-context.puml`, `c4-container-api.puml`
+- `seq-order-creation.puml`, `class-domain-model.puml`
+- `er-schema.puml`, `state-order-lifecycle.puml`
+
+## Related
+- Deep guidance: `skills/architecture-design/`

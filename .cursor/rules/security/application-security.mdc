@@ -1,0 +1,58 @@
+---
+description: Application security rules for Java applications covering OWASP Top 10, input validation, and security defaults
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Application Security
+
+Based on OWASP Top 10 and CWE Top 25.
+
+## Input Validation
+- Validate all external input at system boundaries
+- Use Bean Validation annotations (`@NotNull`, `@Size`, `@Pattern`, `@Email`)
+- Whitelist validation: define what IS allowed, not what is NOT
+- Reject and log invalid input
+
+## Injection Prevention
+- SQL: parameterized queries or Spring Data methods only
+- OS command: avoid `Runtime.exec()`; use ProcessBuilder with explicit args
+- LDAP, XPath: parameterized APIs
+- Log injection: strip newlines and control characters from user input
+
+## Authentication
+- Use proven frameworks (Spring Security) -- never roll your own
+- Multi-factor authentication for sensitive operations
+- Password storage: bcrypt or Argon2 with appropriate cost factor
+- Account lockout after repeated failures
+
+## Authorization
+- Deny by default; explicitly grant access
+- Principle of least privilege
+- Server-side enforcement; never rely on client-side checks
+- Audit log for authorization decisions
+
+## Session Management
+- Rotate session IDs after authentication
+- HttpOnly, Secure, SameSite cookies
+- Absolute and idle session timeouts
+- Stateless tokens (JWT) for REST APIs with short expiry
+
+## Secrets
+- Never in source code, config files committed to VCS, or logs
+- Use environment variables, vault services, or encrypted config
+- Rotate regularly; support hot-reloading
+
+## Dependency Security
+- OWASP Dependency-Check in every build
+- Subscribe to CVE feeds for direct dependencies
+- Update vulnerable dependencies within SLA (critical: 24h, high: 7d)
+
+## Error Handling
+- Generic error messages to clients
+- Detailed logging server-side with correlation IDs
+- Never expose stack traces, class names, or internal paths
+
+## Related
+- `rules/java/secure-coding.mdc` -- Java-specific secure coding
+- Deep guidance: `skills/java-secure-coding/`

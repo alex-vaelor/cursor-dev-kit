@@ -1,0 +1,39 @@
+---
+description: Spring Boot integration testing conventions using @SpringBootTest, Testcontainers, and WireMock
+globs: ["**/src/test/**/*IntegrationTest.java", "**/src/test/**/*IT.java"]
+alwaysApply: false
+---
+
+# Spring Boot Integration Testing
+
+## Full Context Tests
+- `@SpringBootTest(webEnvironment = RANDOM_PORT)` for full integration tests
+- Use `TestRestTemplate` or `WebTestClient` for HTTP calls
+- Test real request/response cycles through the full stack
+
+## Testcontainers
+- `@Testcontainers` + `@Container` for database and service containers
+- `@ServiceConnection` (Spring Boot 3.1+ / 4.x) for automatic connection configuration
+- Shared containers via `static` fields for performance
+- Use `@DynamicPropertySource` for custom property injection
+
+## WireMock
+- Stub external HTTP services with WireMock
+- `@WireMockTest` or embedded `WireMockServer`
+- Verify expected interactions with external services
+
+## Test Data
+- `@Sql` for database setup/teardown scripts
+- `@Transactional` on test classes for automatic rollback
+- Test fixtures: realistic but minimal data sets
+
+## Naming Convention
+- Suffix: `*IntegrationTest.java` or `*IT.java`
+- Configure Maven Failsafe plugin to run `*IT.java` separately
+
+## Performance
+- Share expensive containers across test classes
+- Use `@DirtiesContext` sparingly -- only when context state is corrupted
+
+## Related
+- Deep guidance: `skills/spring-boot-testing/references/integration-testing.md`

@@ -1,0 +1,57 @@
+---
+description: SQL query optimization rules -- indexing strategy, query patterns, EXPLAIN ANALYZE, N+1 prevention, and performance tuning for relational databases
+globs: ["**/*.sql", "**/src/main/java/**/*Repository*.java"]
+alwaysApply: false
+---
+
+# SQL Query Optimization
+
+## Indexing Strategy
+
+- Create indexes on columns used in WHERE, JOIN, and ORDER BY clauses
+- Use composite indexes with column order matching query patterns (leftmost prefix rule)
+- Prefer covering indexes for frequently executed read queries
+- Use partial indexes for queries filtering on common conditions
+- Avoid over-indexing: each index costs write performance and storage
+
+## Query Patterns
+
+### Do
+- Use parameterized queries (never string concatenation for SQL)
+- Prefer `EXISTS` over `IN` for correlated subqueries
+- Use window functions (`ROW_NUMBER`, `RANK`, `LAG`, `LEAD`) instead of self-joins
+- Use `LIMIT` / `FETCH FIRST` with keyset pagination for large result sets
+- Batch inserts instead of row-by-row insertion
+
+### Avoid
+- `SELECT *` -- always specify columns
+- Functions on indexed columns in WHERE clauses (prevents index usage)
+- Implicit type conversions in comparisons
+- `LIKE '%prefix'` on non-indexed columns (cannot use B-tree index)
+- Cartesian joins (missing JOIN conditions)
+
+## N+1 Query Prevention
+
+- Detect with SQL query logging and count assertions in tests
+- Use `JOIN FETCH` (JPA) or explicit joins in SQL
+- For Spring Data JDBC: use custom queries with joins
+- Consider entity graphs or batch fetching for complex object graphs
+
+## EXPLAIN ANALYZE
+
+Run `EXPLAIN ANALYZE` on any query touching >1000 rows or executing >10 times/second:
+- Check for sequential scans on large tables
+- Verify index scans are used where expected
+- Watch for high row estimates vs actual rows (stale statistics)
+- Run `ANALYZE` to refresh table statistics
+
+## Connection Management
+
+- Use connection pooling (HikariCP is Spring Boot default)
+- Set pool size = `(core_count * 2) + effective_spindle_count`
+- Configure statement timeout to prevent long-running queries
+- Use read replicas for heavy read workloads
+
+## Related
+- `rules/sql/database-design.mdc` -- schema design
+- `skills/database-design/` -- database design skill

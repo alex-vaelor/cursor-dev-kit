@@ -1,0 +1,91 @@
+---
+description: Repository cleanliness rules including gitignore, secrets prevention, binary handling, LFS, history hygiene, and tag conventions
+globs: ["**/.gitignore", "**/.gitattributes", "**/.git/**"]
+alwaysApply: false
+---
+
+# Repository Hygiene
+
+## .gitignore Management
+
+Every repository must have a `.gitignore` that excludes:
+
+### Always Ignored
+- Build output: `target/`, `build/`, `out/`
+- IDE files: `.idea/`, `.vscode/` (except shared settings), `*.iml`
+- OS files: `.DS_Store`, `Thumbs.db`, `desktop.ini`
+- Environment files: `.env`, `.env.local`, `.env.*.local`
+- Logs: `*.log`, `logs/`
+- Temporary files: `*.tmp`, `*.swp`, `*.bak`
+
+### Never Ignored
+- Build config: `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`
+- Shared configs: `.editorconfig`, `.gitattributes`, linter configs
+- CI/CD configs: `.github/workflows/`, `Dockerfile`, `docker-compose.yml`
+
+## Secrets Prevention
+
+### Rules
+- Never commit credentials, API keys, tokens, passwords, or private keys
+- Never commit `.env` files containing real values
+- Use `.env.example` with placeholder values instead
+- Use secrets managers (GitHub Secrets, Vault, AWS Secrets Manager) for CI/CD
+- Rotate any credential that was ever committed, even if removed later
+
+### Detection Patterns
+Reject commits containing:
+- `AKIA[0-9A-Z]{16}` (AWS access keys)
+- `sk-[a-zA-Z0-9]{48}` (OpenAI keys)
+- `ghp_[a-zA-Z0-9]{36}` (GitHub PATs)
+- `password\s*=\s*["'][^"']+["']` (hardcoded passwords)
+- `-----BEGIN (RSA |EC )?PRIVATE KEY-----`
+
+Use pre-commit hooks or tools like `gitleaks`, `truffleHog`, or `detect-secrets` to enforce this.
+
+## Binary and Large File Handling
+
+### Rules
+- Do not commit binary files larger than 500KB to the repository
+- Use Git LFS for assets that must be versioned: images, fonts, compiled artifacts
+- Never commit generated files (compiled `.class` files, generated sources)
+- Never commit database dumps, heap dumps, or log archives
+
+### Git LFS Setup
+```
+# .gitattributes
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.jar filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
+```
+
+## History Cleanliness
+
+- Feature branches use rebase to stay current with `main` (linear history)
+- Squash-merge feature branches into `main` by default
+- Write meaningful commit messages (see commit-conventions rule)
+- Do not leave merge commits on feature branches
+- Remove fixup and WIP commits before merging (interactive rebase or autosquash)
+- Never rewrite history on shared branches (`main`, `develop`, `release/*`)
+
+## Tag Conventions
+
+| Pattern | Purpose | Example |
+|---------|---------|---------|
+| `v<major>.<minor>.<patch>` | Release version | `v2.4.1` |
+| `<service>/v<version>` | Monorepo service release | `auth-service/v1.3.0` |
+| `v<version>-rc.<n>` | Release candidate | `v3.0.0-rc.1` |
+| `v<version>-beta.<n>` | Beta release | `v2.5.0-beta.2` |
+
+- Tags are immutable: never delete or move a published tag
+- Annotated tags are preferred over lightweight tags for releases
+- Tag messages should include a brief summary of the release
+
+## Branch Cleanup
+
+- Delete feature branches after merge (automated via GitHub settings)
+- Prune remote tracking branches regularly: `git fetch --prune`
+- Remove stale local branches: `git branch --merged main | grep -v main | xargs git branch -d`
+- Remove stale worktrees: `git worktree prune`

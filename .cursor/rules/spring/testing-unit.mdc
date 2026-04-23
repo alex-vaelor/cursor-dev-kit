@@ -1,0 +1,44 @@
+---
+description: Spring Boot unit testing conventions using slice tests, MockMvc, and Mockito
+globs: ["**/src/test/**/*Test.java"]
+alwaysApply: false
+---
+
+# Spring Boot Unit Testing
+
+## Slice Tests
+- `@WebMvcTest(Controller.class)` for controller layer tests
+- `@DataJdbcTest` for Spring Data JDBC repository tests
+- `@DataJpaTest` for Spring Data JPA repository tests (auto-configures embedded DB, JPA, and Hibernate)
+- `@JsonTest` for JSON serialization/deserialization tests
+- Slice tests load only the relevant Spring context slice
+
+## MockMvc
+- Use `MockMvc` to test controllers without starting a full server
+- Test HTTP method, path, request body, status code, response body
+- Verify response structure with `jsonPath()` assertions
+
+## Mocking
+- `@MockitoBean` (Spring Boot 4.x) to replace beans in the test context
+- `@MockitoSpyBean` for partial mocking
+- Mockito `when().thenReturn()` for stubbing, `verify()` for interaction checks
+
+## Test Structure
+- Given-When-Then pattern
+- One assertion concept per test
+- Descriptive test names: `shouldReturnUserWhenIdExists`
+- `@DisplayName` for readable test output
+
+## Configuration
+- Test properties in `src/test/resources/application-test.yml`
+- `@ActiveProfiles("test")` to activate test profile
+- Use `@TestConfiguration` for test-specific beans
+
+## Anti-Patterns
+- Loading full application context for unit tests (`@SpringBootTest`)
+- Testing Spring internals instead of behavior
+- Shared mutable state between tests
+
+## Related
+- Deep guidance: `skills/spring-boot-testing/references/unit-testing.md`
+- General Java testing: `skills/java-testing/`

@@ -1,0 +1,95 @@
+---
+description: Pull request standards including description requirements, size limits, review readiness, and self-review checklist
+globs: ["**/.github/**"]
+alwaysApply: false
+---
+
+# Pull Request Quality Standards
+
+## PR Description Requirements
+
+Every pull request must include these sections:
+
+### Summary
+One paragraph explaining what changed and why. Link to the issue or ticket.
+
+### Changes
+A categorized list of what was modified:
+
+| Category | Files | Key Change |
+|----------|-------|------------|
+| source | `src/auth.ts` | Added OAuth2 PKCE flow |
+| test | `tests/auth.test.ts` | Covers token refresh edge case |
+| config | `.env.example` | New `OAUTH_CLIENT_ID` variable |
+
+### Testing
+How was this tested? Include:
+- Which tests were added or modified
+- Manual testing steps performed
+- Commands to verify (`mvn test`, `npm test`)
+
+### Risks and Rollback
+- Is this a breaking change? Yes / No
+- Risk level: Low / Medium / High -- explain why
+- Rollback plan: "Revert this commit" or specific steps
+
+## Size Limits
+
+| PR Size | Lines Changed | Guidance |
+|---------|---------------|----------|
+| Small | < 200 | Ideal. Easy to review. |
+| Medium | 200 - 500 | Acceptable. Provide good description. |
+| Large | 500 - 1000 | Consider splitting. Justify in description. |
+| Too large | > 1000 | Must split unless migration/generated code. |
+
+### Splitting Large PRs
+
+When a PR exceeds 500 lines:
+
+1. Split by feature area or layer (API, service, data)
+2. Split into preparatory refactoring + feature
+3. Use stacked PRs with clear dependency notes
+4. Mark generated or boilerplate code explicitly
+
+## Self-Review Checklist (Before Requesting Review)
+
+Before requesting review, the author must verify:
+
+- [ ] PR title follows conventional format: `type(scope): description`
+- [ ] Description is complete (summary, changes, testing, risks)
+- [ ] All CI checks pass
+- [ ] No unresolved merge conflicts
+- [ ] No debug statements, commented-out code, or TODOs left in
+- [ ] No secrets or credentials in the diff
+- [ ] Tests are included for new behavior
+- [ ] Documentation is updated if public API changed
+- [ ] Branch is up to date with `main`
+- [ ] I have reviewed the diff myself before requesting others
+
+## Review Turnaround
+
+- First review within 1 business day
+- Author responds to feedback within 1 business day
+- Blocking issues must be resolved before merge
+- Do not merge your own PR without at least 1 approval (except trivial docs/typo fixes)
+
+## Draft PRs
+
+Use draft PRs for:
+- Work in progress that needs early feedback
+- Changes that depend on another PR
+- Spike or prototype work
+
+Convert to ready-for-review only when CI passes and self-review checklist is complete.
+
+## PR Labels
+
+Apply labels to aid triage:
+
+| Label | Purpose |
+|-------|---------|
+| `breaking-change` | Contains breaking changes |
+| `needs-review` | Ready for review |
+| `needs-docs` | Documentation update required |
+| `hotfix` | Urgent production fix |
+| `do-not-merge` | Blocked or waiting on dependency |

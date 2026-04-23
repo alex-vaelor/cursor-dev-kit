@@ -1,0 +1,174 @@
+---
+description: Spring Boot Actuator conventions -- endpoint exposure, security hardening, custom health indicators, Micrometer metrics, Kubernetes probes, and Prometheus integration
+globs: ["**/application*.yml", "**/application*.yaml", "**/application*.properties", "**/src/main/java/**/*Health*.java", "**/src/main/java/**/*Metric*.java"]
+alwaysApply: false
+---
+
+# Spring Boot Actuator
+
+## Endpoint Exposure
+
+### Default: Expose Only What You Need
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+```
+
+### NEVER in Production
+- `management.endpoints.web.exposure.include: "*"` -- exposes env, beans, configprops, heapdump
+- Unsecured `/actuator/env` leaks secrets
+- Unsecured `/actuator/heapdump` leaks entire heap including credentials
+
+### Security
+```java
+@Bean
+public SecurityFilterChain actuatorSecurity(HttpSecurity http) throws Exception {
+    return http
+        .securityMatcher("/actuator/**")
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/actuator/health/**").permitAll()
+            .requestMatchers("/actuator/info").permitAll()
+            .requestMatchers("/actuator/prometheus").permitAll()
+            .anyRequest().hasRole("ACTUATOR_ADMIN")
+        )
+        .httpBasic(Customizer.withDefaults())
+        .build();
+}
+```
+
+## Health Indicators
+
+### Built-in
+Spring Boot auto-configures: `db` (DataSource), `diskSpace`, `redis`, `mail`, `jms`, `rabbit`.
+
+### Custom Health Indicator
+```java
+@Component
+public class PaymentGatewayHealthIndicator implements HealthIndicator {
+
+    private final PaymentGatewayClient client;
+
+    @Override
+    public Health health() {
+        try {
+            client.ping();
+            return Health.up()
+                .withDetail("gateway", "reachable")
+                .build();
+        } catch (Exception e) {
+            return Health.down()
+                .withDetail("gateway", "unreachable")
+                .withException(e)
+                .build();
+        }
+    }
+}
+```
+
+### Kubernetes Probes
+```yaml
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, db, redis
+```
+- **Liveness** (`/actuator/health/liveness`): Is the JVM alive? Restart if DOWN.
+- **Readiness** (`/actuator/health/readiness`): Can the app serve traffic? Remove from LB if DOWN.
+
+## Custom Metrics (Micrometer)
+
+### Counter (events)
+```java
+@Service
+public class OrderService {
+    private final Counter orderCounter;
+
+    public OrderService(MeterRegistry registry) {
+        this.orderCounter = Counter.builder("orders.created")
+            .description("Total orders created")
+            .tag("type", "api")
+            .register(registry);
+    }
+
+    public Order createOrder(OrderRequest request) {
+        var order = /* ... */;
+        orderCounter.increment();
+        return order;
+    }
+}
+```
+
+### Timer (latency)
+```java
+@Around("@annotation(Timed)")
+public Object time(ProceedingJoinPoint pjp) throws Throwable {
+    return Timer.builder("service.method.duration")
+        .tag("class", pjp.getTarget().getClass().getSimpleName())
+        .tag("method", pjp.getSignature().getName())
+        .register(meterRegistry)
+        .record(() -> {
+            try { return pjp.proceed(); }
+            catch (Throwable t) { throw new RuntimeException(t); }
+        });
+}
+```
+
+### Gauge (current value)
+```java
+@Bean
+public MeterBinder queueSizeGauge(TaskQueue taskQueue) {
+    return registry -> Gauge.builder("task.queue.size", taskQueue, TaskQueue::size)
+        .description("Current task queue depth")
+        .register(registry);
+}
+```
+
+## Tagging Conventions
+- Use lowercase, dot-separated names: `orders.created`, `http.server.requests`
+- Low-cardinality tags only: `status`, `method`, `outcome`
+- **NEVER** tag with user IDs, request IDs, or other high-cardinality values
+
+## Info Endpoint
+```yaml
+info:
+  app:
+    name: "@project.name@"
+    version: "@project.version@"
+    java: ${java.version}
+    spring-boot: "@spring-boot.version@"
+```
+
+## Prometheus Export
+```yaml
+management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+```
+Endpoint: `/actuator/prometheus` (Prometheus scrape target).
+
+## Management Port Separation
+For sensitive production environments, separate Actuator from application traffic:
+```yaml
+management:
+  server:
+    port: 9090
+```

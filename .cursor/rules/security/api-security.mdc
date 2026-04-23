@@ -1,0 +1,108 @@
+---
+description: API security rules for REST APIs covering OWASP API Security Top 10, authentication, rate limiting, CORS, transport security, and Spring Security patterns
+globs: ["**/src/main/java/**/*Controller*.java", "**/src/main/java/**/*Security*.java", "**/src/main/java/**/*Filter*.java"]
+alwaysApply: false
+---
+
+# API Security
+
+Based on OWASP API Security Top 10 (2023).
+
+## OWASP API Security Top 10
+
+| # | Risk | Spring Boot Mitigation |
+|---|------|----------------------|
+| **API1** | Broken Object-Level Authorization (BOLA) | `@PreAuthorize` with ownership checks; never trust client-supplied IDs |
+| **API2** | Broken Authentication | Spring Security `SecurityFilterChain`; JWT validation (issuer, audience, expiry) |
+| **API3** | Broken Object Property Level Authorization | Response DTOs (records); never expose entity directly; `@JsonIgnore` for sensitive fields |
+| **API4** | Unrestricted Resource Consumption | Rate limiting (Bucket4j / Resilience4j); request body size limits; pagination |
+| **API5** | Broken Function-Level Authorization | Role-based method security; deny by default; audit admin endpoints |
+| **API6** | Unrestricted Access to Sensitive Business Flows | CAPTCHA, device fingerprinting, rate limiting on critical flows (registration, checkout) |
+| **API7** | Server-Side Request Forgery (SSRF) | Validate/allowlist URLs; no user-controlled URLs in server-side HTTP calls |
+| **API8** | Security Misconfiguration | CORS restricted; Actuator secured; debug disabled in prod; security headers set |
+| **API9** | Improper Inventory Management | OpenAPI spec as source of truth; deprecate old versions; no shadow/debug endpoints in prod |
+| **API10** | Unsafe Consumption of APIs | Validate responses from third-party APIs; timeout + circuit breaker for external calls |
+
+## Authentication
+- Require authentication on all endpoints by default (`anyRequest().authenticated()`)
+- OAuth2 / OIDC for external consumers via Spring Security OAuth2 Resource Server
+- API keys for service-to-service communication (with rotation policy)
+- JWT validation: verify signature, issuer (`iss`), audience (`aud`), expiration (`exp`)
+- Use asymmetric keys (RS256/ES256), never symmetric secrets in code
+
+```java
+// Spring Security default: deny all, then allow specific paths
+http.authorizeHttpRequests(auth -> auth
+    .requestMatchers("/api/public/**").permitAll()
+    .requestMatchers("/actuator/health").permitAll()
+    .anyRequest().authenticated()
+)
+```
+
+## Authorization
+- **Object-level (BOLA prevention)**: Verify requester owns/can access the specific resource instance
+- **Function-level**: Verify requester has the role/permission for the operation
+- Never rely on client-supplied IDs for authorization decisions
+- Use `@PreAuthorize` or `@Secured` for method-level checks
+
+```java
+@PreAuthorize("hasRole('USER') and @resourceSecurity.isOwner(#id, authentication)")
+@GetMapping("/orders/{id}")
+public OrderResponse getOrder(@PathVariable Long id) { /* ... */ }
+```
+
+## Rate Limiting
+- Apply rate limits per client/API key using Bucket4j or Resilience4j
+- Return `429 Too Many Requests` with `Retry-After` header
+- Different limits for authenticated vs anonymous requests
+- Use token bucket algorithm for burst tolerance
+- Distributed rate limiting via Redis for multi-instance deployments
+
+## Transport Security
+- TLS 1.2+ for all API communication
+- HSTS headers for browser-facing APIs
+- Certificate pinning for mobile/embedded clients where feasible
+- Spring Boot SSL bundles for TLS configuration
+
+## CORS
+- Configure explicitly for known origins only
+- Never `Access-Control-Allow-Origin: *` in production
+- Restrict allowed methods, headers, and credentials
+
+```java
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    var config = new CorsConfiguration();
+    config.setAllowedOrigins(List.of("https://app.example.com"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+    config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+    config.setAllowCredentials(true);
+    var source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/api/**", config);
+    return source;
+}
+```
+
+## Input Validation
+- Validate content types: reject unexpected `Content-Type` headers
+- Maximum request body size: `server.tomcat.max-http-form-post-size`, `spring.servlet.multipart.max-file-size`
+- Jakarta Bean Validation on all request DTOs: `@Valid`, `@Size`, `@Pattern`, `@Positive`
+- Reject requests with unexpected query parameters (strict binding)
+
+## Response Security
+- Remove server version headers (`server.server-header` in Spring Boot)
+- `X-Content-Type-Options: nosniff`
+- `Cache-Control: no-store` for sensitive data
+- Never include sensitive data in URLs (query parameters are logged)
+- Use RFC 9457 `ProblemDetail` for error responses -- no stack traces, no internal details
+
+## SSRF Prevention (API7)
+- Never pass user-controlled URLs to `RestClient`, `WebClient`, or `RestTemplate`
+- Allowlist permitted external hosts
+- Block internal/private IP ranges in outbound calls
+
+## Logging and Monitoring
+- Log all authentication/authorization events (success and failure)
+- Detect and alert on anomalous patterns (brute force, credential stuffing, rate limit abuse)
+- Include correlation IDs (MDC) for request tracing across services
+- Never log secrets, tokens, or passwords

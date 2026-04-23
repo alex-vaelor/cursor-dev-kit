@@ -1,0 +1,50 @@
+---
+description: Code quality standards including readability, maintainability, SOLID principles, and anti-patterns
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Code Quality
+
+## Principles
+
+- **SOLID**: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **DRY**: Don't Repeat Yourself -- extract shared logic, but avoid premature abstraction
+- **KISS**: Keep It Simple -- prefer clarity over cleverness
+- **YAGNI**: You Aren't Gonna Need It -- do not build speculative features
+
+## Readability
+
+- Favor descriptive names over comments
+- Functions should do one thing and be under 30 lines
+- Classes should have a single responsibility
+- Use early returns to reduce nesting
+- Avoid boolean parameters; use enums or separate methods instead
+- Limit method parameters to 3-4; use parameter objects for more
+
+## Error Handling
+
+- Catch specific exceptions, never bare `catch (Exception e)`
+- Log with context (what failed, what inputs, what state)
+- Fail fast on invalid inputs at boundaries
+- Use custom exceptions for domain-specific errors
+- Never swallow exceptions silently
+
+## Performance Defaults
+
+- Avoid premature optimization; profile first
+- Use appropriate data structures (HashMap for lookup, ArrayList for iteration)
+- Batch database operations; avoid N+1 queries
+- Cache expensive computations only when measured as necessary
+- Use pagination for large result sets
+
+## Anti-Patterns to Avoid
+
+| Pattern | Problem | Alternative |
+|---------|---------|-------------|
+| God class | Too many responsibilities | Split by domain concern |
+| Magic numbers | Unclear intent | Named constants |
+| Deep inheritance | Fragile hierarchies | Composition over inheritance |
+| Stringly-typed | No compile-time safety | Enums, value objects |
+| Service locator | Hidden dependencies | Constructor injection |
+| Temporal coupling | Methods must be called in order | Builder or state machine |

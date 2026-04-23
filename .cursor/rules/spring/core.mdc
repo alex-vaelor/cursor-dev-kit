@@ -1,0 +1,48 @@
+---
+description: Spring Boot core conventions for annotations, bean management, configuration, dependency injection, and application structure
+globs: ["**/src/main/java/**/*.java", "**/application*.yml", "**/application*.properties"]
+alwaysApply: false
+---
+
+# Spring Boot Core
+
+Aligned with Spring Boot 4.0.x / Spring Framework 7.0.x.
+
+## Application Structure
+- Single `@SpringBootApplication` class at the root package
+- Group by feature/domain, not by technical layer
+- Package-private classes by default; only expose what is needed
+
+## Annotations
+- `@RestController` for REST endpoints (combines `@Controller` + `@ResponseBody`)
+- `@Service` for business logic
+- `@Repository` for data access (enables exception translation)
+- Avoid `@Component` as a catch-all; use role-specific stereotypes
+
+## Dependency Injection
+- Constructor injection only (no `@Autowired` on fields or setters)
+- Single constructor per bean (auto-detected by Spring)
+- Mark dependencies `final`
+- Use `@Qualifier` or `@Primary` for disambiguation
+
+## Configuration
+- `@ConfigurationProperties` with `@Validated` for type-safe config binding
+- Fail-fast on invalid configuration at startup
+- Externalize environment-specific values; never hardcode
+- Use profiles (`@Profile`) for environment-specific beans
+
+## Bean Lifecycle
+- Default scope: singleton. Use `@Scope("prototype")` only when justified
+- `@PostConstruct` for initialization; `@PreDestroy` for cleanup
+- Graceful shutdown: configure `server.shutdown=graceful`
+
+## Jakarta EE
+- Use `jakarta.*` namespace exclusively
+- Never mix `javax.annotation` / `javax.validation` with `jakarta.*`
+
+## Virtual Threads
+- Enable with `spring.threads.virtual.enabled=true` on supported stacks
+- Appropriate for I/O-bound workloads; measure before enabling
+
+## Related
+- Deep guidance: `skills/spring-boot-core/`

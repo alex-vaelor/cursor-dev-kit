@@ -1,0 +1,44 @@
+---
+description: Java unit testing rules for JUnit 5/6, AssertJ, Mockito, and test quality
+globs: ["**/src/test/**/*Test.java"]
+alwaysApply: false
+---
+
+# Unit Testing
+
+## Framework
+- JUnit 5 (or JUnit 6 with Spring Framework 7)
+- AssertJ for fluent assertions: `assertThat(result).isEqualTo(expected)`
+- Mockito with `MockitoExtension` for dependency mocking
+
+## Test Structure
+- Given-When-Then pattern (Arrange-Act-Assert)
+- One assertion concept per test method
+- Descriptive names: `shouldCalculateTotalWithDiscount`, `shouldThrowWhenInputIsNull`
+- `@DisplayName` for human-readable names in reports
+
+## Annotations
+- `@Test`, `@BeforeEach`, `@AfterEach` for lifecycle
+- `@Nested` for grouping related tests
+- `@ParameterizedTest` with `@ValueSource`, `@CsvSource`, `@MethodSource`
+- `@Disabled("reason")` with explanation -- never disable without reason
+
+## Mocking
+- `@Mock` for dependencies, `@InjectMocks` for the class under test
+- Stub with `when().thenReturn()`, verify with `verify()`
+- Never mock the class under test
+- Prefer fakes or stubs over mocks when behavior is simple
+
+## Assertions
+- AssertJ over JUnit assertions for readability
+- `assertThatThrownBy(() -> ...)` for exception testing
+- `assertThat(list).hasSize(3).contains(item)` for collection assertions
+
+## Anti-Patterns
+- Testing implementation details instead of behavior
+- Using reflection to access private members
+- Shared mutable state between tests
+- Hard-coded test data without explanation
+
+## Related
+- Deep guidance: `skills/java-testing/references/unit-testing.md`

@@ -1,0 +1,84 @@
+---
+description: Branch naming conventions, patterns, validation rules, and examples
+globs: ["**/.git/**"]
+alwaysApply: false
+---
+
+# Branch Naming Conventions
+
+## Pattern
+
+```
+<type>/<ticket-id>-<short-description>
+```
+
+When no ticket exists:
+
+```
+<type>/<short-description>
+```
+
+## Branch Types
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| `feature` | New functionality | `feature/AUTH-42-oauth-login` |
+| `bugfix` | Bug repair | `bugfix/API-99-null-response-crash` |
+| `hotfix` | Urgent production fix | `hotfix/DB-7-connection-leak` |
+| `release` | Release preparation | `release/2.4.0` |
+| `chore` | Tooling, config, maintenance | `chore/update-ci-pipeline` |
+| `docs` | Documentation only | `docs/api-usage-guide` |
+| `refactor` | Code restructuring | `refactor/extract-validation-module` |
+| `test` | Test additions | `test/add-auth-edge-cases` |
+| `experiment` | Spikes, prototypes | `experiment/graphql-federation` |
+
+## Rules
+
+- Use lowercase only
+- Use hyphens (`-`) as word separators, never underscores or spaces
+- Use forward slash (`/`) only to separate type from description
+- Keep the description under 50 characters
+- Total branch name must not exceed 100 characters
+- Include the ticket ID when one exists (e.g., JIRA, GitHub issue number)
+- Be descriptive: the name should convey what the branch does
+
+## Validation Regex
+
+```regex
+^(feature|bugfix|hotfix|release|chore|docs|refactor|test|experiment)\/[a-z0-9][a-z0-9\-]*[a-z0-9]$
+```
+
+## Examples
+
+### Good
+
+```
+feature/AUTH-42-add-oauth-provider
+bugfix/CART-15-fix-quantity-overflow
+hotfix/PROD-3-patch-sql-injection
+release/3.1.0
+chore/upgrade-spring-boot-3.3
+docs/update-deployment-guide
+```
+
+### Bad
+
+```
+my-branch              # Missing type prefix
+feature/My_Branch      # Uppercase and underscores
+fix stuff              # Spaces, no type separator
+feature/               # Missing description
+feature/a-very-long-branch-name-that-goes-on-and-on-about-nothing # Too long, too vague
+FEATURE/add-login      # Uppercase type
+feature/add_login      # Underscores in description
+```
+
+## Special Branches
+
+These branches do not follow the type prefix pattern:
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Production-ready code | Protected, requires PR |
+| `develop` | Integration branch (if using GitFlow) | Protected, requires PR |
+| `staging` | Pre-production testing | Protected |

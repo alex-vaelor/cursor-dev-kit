@@ -1,0 +1,50 @@
+---
+description: Java coding standards for naming, formatting, imports, class design, and modern idioms
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Coding Standards
+
+## Language Baseline
+- Minimum: Java 17 LTS. Recommended: Java 21 LTS.
+- Use `jakarta.*` namespace exclusively; never `javax.annotation` or `javax.validation`.
+
+## Naming
+- Packages: reverse domain, all lowercase, no underscores (`com.example.ordermanagement`)
+- Classes/Interfaces: PascalCase. Avoid `Impl` suffix; use descriptive names (`StripePaymentProcessor`)
+- Methods/Variables: camelCase. Boolean: `is*`, `has*`, `can*`, `should*`
+- Constants: UPPER_SNAKE_CASE, defined in owning class
+- Test classes: `*Test`, `*IntegrationTest`, `*AcceptanceTest`
+
+## Formatting
+- 4-space indentation, 120-character line limit
+- No wildcard imports
+- Import order: `java.*`, `jakarta.*`, third-party, project-internal, static imports last
+- Files end with newline, UTF-8 encoding, no trailing whitespace
+
+## Class Design
+- One public class per file
+- Group by feature/domain, not by technical layer
+- Prefer composition over inheritance
+- Keep classes focused (Single Responsibility)
+- Limit method parameters to 3-4; use parameter objects for more
+
+## Methods
+- Under 30 lines preferred
+- Early returns to reduce nesting
+- Avoid boolean parameters; use enums or separate methods
+- Validate inputs at public boundaries with `Objects.requireNonNull`
+
+## Null Safety
+- JSpecify annotations at package level (`@NullMarked`)
+- Return `Optional` for methods that may not produce a result
+- Return empty collections, never `null`
+
+## Constructor Injection
+- Constructor injection only (no field or setter injection)
+- Mark all dependencies `final`
+
+## Related
+- Deep guidance: `skills/java-oop-design/`, `skills/java-type-design/`
+- Conventions: `shared/java-conventions.md`

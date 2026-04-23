@@ -1,0 +1,39 @@
+---
+description: Testing strategy for Java projects covering test pyramid, coverage targets, and test organization
+globs: ["**/src/test/**/*.java"]
+alwaysApply: false
+---
+
+# Testing Strategy
+
+## Test Pyramid
+- **Unit tests** (base): fast, isolated, test single classes. Majority of tests.
+- **Integration tests** (middle): test component interactions with real dependencies (Testcontainers). Moderate count.
+- **Acceptance tests** (top): end-to-end workflows through the API. Small count, high value.
+
+## Coverage Targets
+- Line coverage: >= 80% overall, >= 90% for new code
+- Branch coverage: >= 70% overall, >= 80% for new code
+- Exclude from coverage: config classes, generated code, DTOs with no logic
+
+## Test Organization
+- Mirror source structure: `src/main/java/com/example/Foo.java` -> `src/test/java/com/example/FooTest.java`
+- Integration tests: `*IntegrationTest.java` or `*IT.java`
+- Acceptance tests: `*AcceptanceTest.java` or `*AT.java`
+
+## Test Qualities (A-TRIP)
+- **Automatic**: no manual setup or verification
+- **Thorough**: cover happy path, edge cases, error paths
+- **Repeatable**: same result every time, no external dependencies
+- **Independent**: no test depends on another test's outcome
+- **Professional**: same code quality standards as production code
+
+## What to Test
+- Business logic: thorough unit tests
+- API contracts: integration tests for request/response
+- Data access: integration tests with real database
+- Security: authentication and authorization flows
+- Error handling: exception scenarios and error responses
+
+## Related
+- Deep guidance: `skills/java-testing/`

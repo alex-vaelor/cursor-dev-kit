@@ -1,0 +1,67 @@
+---
+description: Agile user story rules -- format, INVEST criteria, acceptance criteria with Gherkin, and story splitting patterns
+globs: ["**/docs/stories/**", "**/docs/agile/**", "**/*.feature"]
+alwaysApply: false
+---
+
+# Agile User Stories
+
+## Format
+
+```
+As a [persona],
+I want to [goal],
+So that [benefit].
+```
+
+Every story must state who, what, and why.
+
+## INVEST Criteria
+
+Every user story must satisfy INVEST before acceptance:
+
+| Criterion | Check |
+|-----------|-------|
+| **Independent** | Can be developed and delivered without depending on other stories |
+| **Negotiable** | Details can be discussed; it's not a rigid specification |
+| **Valuable** | Delivers value to the user or business |
+| **Estimable** | Team can estimate the effort required |
+| **Small** | Completable within a single sprint (1-3 days ideal) |
+| **Testable** | Has clear acceptance criteria that can be verified |
+
+## Acceptance Criteria (Gherkin)
+
+```gherkin
+Feature: [Feature name]
+
+  Scenario: [Scenario description]
+    Given [precondition]
+    And [additional precondition]
+    When [action]
+    Then [expected result]
+    And [additional expectation]
+```
+
+- Write at least 2 scenarios per story (happy path + one error/edge case)
+- Use Scenario Outline with Examples table for data-driven variations
+- Keep scenarios focused on one behavior each
+
+## Story Splitting Patterns
+
+When a story is too large, split by:
+- **Workflow steps**: separate steps in a process
+- **Business rules**: each rule becomes a story
+- **Data variations**: different data types or sources
+- **Operations**: CRUD split (create/read/update/delete)
+- **Acceptance criteria**: each criterion becomes a story
+
+## Constraints
+
+- No story larger than 8 story points (split if larger)
+- Every story must have at least 2 acceptance criteria
+- Link stories to their parent feature
+- Include non-functional requirements as separate stories when needed
+
+## Related
+- `rules/agile/features.mdc` -- feature definition
+- `rules/agile/epics.mdc` -- epic definition

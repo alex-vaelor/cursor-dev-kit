@@ -1,0 +1,83 @@
+---
+description: Bash scripting conventions -- strict mode, error handling, argument parsing, logging, and defensive patterns for production-ready shell scripts
+globs: ["**/*.sh", "**/*.bash"]
+alwaysApply: false
+---
+
+# Bash Scripting
+
+## Script Header
+
+Every script must start with:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+```
+
+- `set -e` -- exit on any command failure
+- `set -u` -- error on undefined variables
+- `set -o pipefail` -- propagate pipe failures
+
+## Script Structure
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+log()   { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+error() { log "ERROR: $*" >&2; exit 1; }
+
+usage() { cat <<EOF
+Usage: ${SCRIPT_NAME} [OPTIONS] <args>
+Options:
+  -h, --help      Show this help
+  -v, --verbose   Enable verbose output
+EOF
+}
+
+cleanup() { rm -f "${TMPFILE:-}"; }
+trap cleanup EXIT
+
+main() {
+    log "Started"
+    # Implementation here
+    log "Completed"
+}
+
+main "$@"
+```
+
+## Error Handling
+
+- Use `trap cleanup EXIT` for guaranteed cleanup
+- Use `trap 'error "Failed at line ${LINENO}"' ERR` for error reporting
+- Implement retry logic for network operations with exponential backoff
+- Define meaningful exit codes: 0=success, 1=general error, 2=usage error
+- Never use `set +e` to suppress errors; handle them explicitly
+
+## Defensive Patterns
+
+- Quote all variable expansions: `"${var}"` not `$var`
+- Use `readonly` for constants
+- Use `local` for function-scoped variables
+- Check command availability: `command -v docker >/dev/null 2>&1 || error "docker required"`
+- Validate input: check argument count, file existence, permissions
+
+## Logging
+
+- Prefix with timestamp and level: `[2026-04-22 10:30:00] INFO: message`
+- Write errors to stderr, normal output to stdout
+- Support `--verbose` flag for debug output
+- Log start and end of significant operations
+
+## ShellCheck
+
+- Run `shellcheck script.sh` on all scripts before commit
+- Fix all warnings; suppress only with documented `# shellcheck disable=SCNNNN` comment
+- Integrate ShellCheck into CI pipeline
+
+## Related
+- `skills/bash-scripting/` -- bash scripting skill

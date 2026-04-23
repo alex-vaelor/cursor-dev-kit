@@ -1,0 +1,53 @@
+---
+description: Agile feature definition rules -- structure, scope, acceptance criteria, and relationship to epics and user stories
+globs: ["**/docs/features/**", "**/docs/agile/**"]
+alwaysApply: false
+---
+
+# Agile Features
+
+## Definition
+
+A feature is a service or capability that fulfills a stakeholder need. Features are derived from epics and broken into user stories.
+
+## Feature Structure
+
+| Section | Content |
+|---------|---------|
+| **Title & ID** | `FEAT-NNN: Descriptive Title` |
+| **Parent Epic** | Link to parent epic |
+| **Description** | What the feature does (1-2 paragraphs) |
+| **Target Users** | Who uses this feature |
+| **Acceptance Criteria** | Conditions that define "done" |
+| **User Stories** | List of stories that implement this feature |
+| **Dependencies** | Other features, services, or teams |
+| **Technical Notes** | Architecture decisions, API changes, migration needs |
+| **Priority** | MoSCoW (Must/Should/Could/Won't) or numerical |
+
+## Acceptance Criteria Format
+
+Use Given-When-Then for each criterion:
+```
+Given [precondition]
+When [action]
+Then [expected result]
+```
+
+## Constraints
+
+- Each feature should be completable within 1-3 sprints
+- Features must trace back to an epic
+- Acceptance criteria must be testable
+- Include technical notes for features with architectural impact
+
+## Derivation from Epics
+
+1. Read the parent epic document
+2. Identify the key feature from the epic's feature list
+3. Expand with specific acceptance criteria and user stories
+4. Document technical considerations and dependencies
+5. Assign priority relative to other features in the epic
+
+## Related
+- `rules/agile/epics.mdc` -- epic definition
+- `rules/agile/user-stories.mdc` -- user story definition

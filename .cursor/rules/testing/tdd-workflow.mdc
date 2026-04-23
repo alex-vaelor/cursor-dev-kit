@@ -1,0 +1,41 @@
+---
+description: Test-Driven Development workflow rules for Red-Green-Refactor discipline
+globs: ["**/src/test/**/*.java", "**/src/main/java/**/*.java"]
+alwaysApply: false
+---
+
+# TDD Workflow
+
+## Red-Green-Refactor Cycle
+1. **Red**: Write a failing test that defines the expected behavior
+2. **Green**: Write the minimum production code to make the test pass
+3. **Refactor**: Improve the code while keeping all tests green
+
+## Discipline
+- Never write production code without a failing test
+- Keep the Red-Green-Refactor cycle short (minutes, not hours)
+- Commit after each Green phase
+- Refactor both test and production code in the Refactor phase
+
+## Writing the Red Test
+- Start with the simplest case
+- Test names describe the expected behavior
+- Assert the expected outcome, not the implementation
+- The test must fail for the right reason (not a compilation error)
+
+## Going Green
+- Write the simplest code that makes the test pass
+- It is acceptable to hardcode values initially -- refactoring removes them
+- Do not write more code than the test requires
+
+## Refactoring
+- Eliminate duplication (DRY)
+- Improve naming and readability
+- Extract methods, classes, or interfaces as patterns emerge
+- All tests must remain green after refactoring
+
+## Anti-Patterns
+- Writing tests after the code (test-after is not TDD)
+- Writing multiple tests before going green
+- Skipping the refactor phase
+- Over-designing in the green phase

@@ -1,0 +1,43 @@
+---
+description: Maven build conventions for POM structure, dependency management, plugins, and multi-module projects
+globs: ["**/pom.xml"]
+alwaysApply: false
+---
+
+# Maven Conventions
+
+## POM Structure
+- Use `<dependencyManagement>` with BOMs for version centralization
+- Pin all dependency versions explicitly -- no dynamic ranges
+- Properties for version strings: `<spring-boot.version>4.0.5</spring-boot.version>`
+- Standard directory layout: `src/main/java`, `src/test/java`, `src/main/resources`
+
+## Maven Wrapper
+- Always use Maven Wrapper (`mvnw` / `mvnw.cmd`)
+- Commit `.mvn/wrapper/` to version control
+- JVM args in `.mvn/maven.config`
+
+## Dependency Management
+- Import Spring Boot BOM: `spring-boot-dependencies` in `<dependencyManagement>`
+- Separate test dependencies with `<scope>test</scope>`
+- Review new dependencies for license, maintenance status, and CVEs
+- Run `./mvnw dependency:tree` to audit transitive dependencies
+
+## Plugin Management
+- Centralize plugins in `<pluginManagement>` in parent POM
+- Required plugins: Surefire (unit tests), Failsafe (integration tests), JaCoCo (coverage), Enforcer (constraints)
+- Checkstyle/Spotless for formatting enforcement
+
+## Multi-Module Projects
+- Root POM defines `<modules>`, shared properties, and managed dependencies
+- Child POMs inherit from root; no hardcoded versions
+- Check for: version drift across siblings, redundant plugin config, properties that should be centralized
+
+## Build Commands
+- `./mvnw validate` -- pre-change validation
+- `./mvnw compile` -- compilation check (blocking gate)
+- `./mvnw clean verify` -- full build with tests
+- `./mvnw clean install -DskipTests` -- install to local repo (skip only when justified)
+
+## Related
+- Deep guidance: `skills/maven-build/`

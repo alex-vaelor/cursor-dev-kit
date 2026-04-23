@@ -1,0 +1,47 @@
+---
+description: Java functional programming rules for streams, lambdas, Optional, and functional exception handling
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Functional Programming
+
+## Streams
+- Use streams for declarative data transformation pipelines
+- Keep stream pipelines short and readable (3-5 operations)
+- Prefer method references when they improve clarity: `list.stream().map(String::trim)`
+- Use `toList()` (Java 16+) instead of `Collectors.toList()` for unmodifiable lists
+- Avoid side effects in stream operations (`map`, `filter` must be pure)
+
+## Lambdas
+- Keep lambdas short -- extract to named methods when logic exceeds 3 lines
+- Use `@FunctionalInterface` annotation on custom functional interfaces
+- Prefer standard functional interfaces: `Function`, `Predicate`, `Consumer`, `Supplier`
+- Avoid mutating external state from lambdas (effectively final constraint)
+
+## Optional
+- Use `Optional` as return type for methods that may not produce a result
+- Never use `Optional` for fields, parameters, or collection elements
+- Chain with `map`, `flatMap`, `filter` -- avoid `isPresent()`/`get()` pattern
+- Use `orElseThrow()` with a specific exception for required values
+- `orElse()` for default values, `orElseGet()` for expensive defaults
+
+## Functional Exception Handling
+- Checked exceptions do not work with functional interfaces -- wrap or translate
+- Create unchecked wrapper utilities: `uncheckFunction(checkedFn)` that wraps in `RuntimeException`
+- Use `Either<L, R>` or `Result<T, E>` patterns for error-as-value when appropriate
+- Consider `Try` pattern for operations that may fail in stream pipelines
+
+## Composition
+- Compose functions with `andThen()` and `compose()`
+- Compose predicates with `and()`, `or()`, `negate()`
+- Build complex behavior from small, tested building blocks
+
+## Anti-Patterns
+- Streams for simple iteration where a for-loop is clearer
+- Nested streams (flatten or extract into methods)
+- `parallelStream()` without measurement -- concurrent overhead often exceeds benefit
+- Ignoring checked exceptions inside lambdas with empty catch blocks
+
+## Related
+- Deep guidance: `skills/java-functional/`

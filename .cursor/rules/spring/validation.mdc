@@ -1,0 +1,190 @@
+---
+description: Jakarta Bean Validation and Hibernate Validator conventions -- DTO validation, entity constraints, custom validators, validation groups, cross-field validation, and method-level validation
+globs: ["**/src/main/java/**/*Request*.java", "**/src/main/java/**/*Dto*.java", "**/src/main/java/**/*Validator*.java", "**/src/main/java/**/*Controller*.java"]
+alwaysApply: false
+---
+
+# Spring Validation
+
+## Core Principle
+Validate at system boundaries (API input), constrain at persistence layer (entity invariants), and enforce business rules in the service layer. These are three different concerns.
+
+## DTO / Request Validation
+
+### Standard Annotations
+```java
+public record CreateOrderRequest(
+    @NotNull @Size(min = 1, max = 100)
+    List<@Valid OrderItem> items,
+
+    @NotNull @Valid
+    ShippingAddress shippingAddress,
+
+    @NotNull @Positive
+    BigDecimal total,
+
+    @Email @Size(max = 255)
+    String contactEmail,
+
+    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number")
+    String phone
+) {}
+
+public record OrderItem(
+    @NotNull Long productId,
+    @Positive int quantity,
+    @NotNull @Positive BigDecimal unitPrice
+) {}
+```
+
+### Trigger Validation in Controller
+```java
+@PostMapping("/orders")
+public ResponseEntity<OrderResponse> create(@Valid @RequestBody CreateOrderRequest request) {
+    // request is guaranteed valid at this point
+}
+```
+
+### Record Compact Constructor Validation
+For value objects where constraint annotations are insufficient:
+```java
+public record EmailAddress(@Email @NotBlank String value) {
+    public EmailAddress {
+        value = value.strip().toLowerCase();
+    }
+}
+```
+
+## Entity Constraints
+```java
+@Entity
+@Table(name = "orders")
+public class Order {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 500)
+    @NotBlank @Size(max = 500)
+    private String description;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    @NotNull @Positive
+    private BigDecimal total;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    private OrderStatus status;
+}
+```
+Entity constraints are a safety net; primary validation should happen on DTOs at the API boundary.
+
+## Custom Validators
+
+### Annotation + Validator Pair
+```java
+@Target({FIELD, PARAMETER})
+@Retention(RUNTIME)
+@Constraint(validatedBy = FutureDateValidator.class)
+public @interface FutureBusinessDate {
+    String message() default "Must be a future business day";
+    Class<?>[] groups() default {};
+    Class<? extends Payload>[] payload() default {};
+}
+
+public class FutureDateValidator implements ConstraintValidator<FutureBusinessDate, LocalDate> {
+    @Override
+    public boolean isValid(LocalDate value, ConstraintValidatorContext context) {
+        if (value == null) return true; // let @NotNull handle null
+        return value.isAfter(LocalDate.now())
+            && value.getDayOfWeek() != DayOfWeek.SATURDAY
+            && value.getDayOfWeek() != DayOfWeek.SUNDAY;
+    }
+}
+```
+
+## Cross-Field Validation (Class-Level)
+```java
+@Target(TYPE)
+@Retention(RUNTIME)
+@Constraint(validatedBy = DateRangeValidator.class)
+public @interface ValidDateRange {
+    String message() default "End date must be after start date";
+    Class<?>[] groups() default {};
+    Class<? extends Payload>[] payload() default {};
+}
+
+@ValidDateRange
+public record DateRangeRequest(
+    @NotNull LocalDate startDate,
+    @NotNull LocalDate endDate
+) {}
+
+public class DateRangeValidator implements ConstraintValidator<ValidDateRange, DateRangeRequest> {
+    @Override
+    public boolean isValid(DateRangeRequest value, ConstraintValidatorContext ctx) {
+        if (value.startDate() == null || value.endDate() == null) return true;
+        return value.endDate().isAfter(value.startDate());
+    }
+}
+```
+
+## Validation Groups
+```java
+public interface OnCreate {}
+public interface OnUpdate {}
+
+public record UserRequest(
+    @Null(groups = OnCreate.class)
+    @NotNull(groups = OnUpdate.class)
+    Long id,
+
+    @NotBlank(groups = {OnCreate.class, OnUpdate.class})
+    String name
+) {}
+
+@PostMapping
+public ResponseEntity<?> create(@Validated(OnCreate.class) @RequestBody UserRequest req) { }
+
+@PutMapping("/{id}")
+public ResponseEntity<?> update(@Validated(OnUpdate.class) @RequestBody UserRequest req) { }
+```
+
+## Method-Level Validation
+```java
+@Service
+@Validated
+public class OrderService {
+    public Order createOrder(@Valid CreateOrderRequest request) { }
+    public Order findById(@Positive Long id) { }
+}
+```
+Requires `spring-boot-starter-validation` and method validation proxy.
+
+## Error Handling
+```java
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+    var problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+    problem.setTitle("Validation Failed");
+    problem.setProperty("errors", ex.getFieldErrors().stream()
+        .map(fe -> Map.of("field", fe.getField(), "message", fe.getDefaultMessage()))
+        .toList());
+    return problem;
+}
+```
+
+## Validation vs Business Rules
+| Concern | Where | Example |
+|---------|-------|---------|
+| Format/presence | DTO + `@Valid` | `@NotNull`, `@Email`, `@Size` |
+| Entity invariant | Entity constraints | `@Column(nullable = false)` |
+| Business rule | Service layer | "User cannot have more than 5 active orders" |
+
+Business rules belong in service methods, not in validation annotations.
+
+## Anti-Patterns
+- Putting business logic in custom validators
+- Validating in service layer what should be on the DTO
+- Using `@Valid` on entities in repository methods (validate earlier)
+- Ignoring `ConstraintViolationException` from method-level validation

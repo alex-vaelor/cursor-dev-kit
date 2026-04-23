@@ -1,0 +1,42 @@
+---
+description: Gradle build conventions for Kotlin DSL, version catalogs, dependency management, and task configuration
+globs: ["**/build.gradle", "**/build.gradle.kts", "**/settings.gradle*", "**/libs.versions.toml"]
+alwaysApply: false
+---
+
+# Gradle Conventions
+
+## Kotlin DSL
+- Prefer `build.gradle.kts` (Kotlin DSL) for new projects
+- Type-safe accessors for plugins and extensions
+- Explicit task configuration with `tasks.named<>` or `tasks.withType<>`
+
+## Version Catalogs
+- Centralize dependencies in `gradle/libs.versions.toml`
+- Reference in build files: `libs.spring.boot.starter.web`
+- Version bundles for related dependencies
+
+## Dependency Management
+- `implementation` for production deps, `testImplementation` for test deps
+- Use `platform()` for BOM imports
+- `dependencyLocking` for reproducible builds
+- Check for unused dependencies with `gradle-dependency-analysis-plugin`
+
+## Gradle Wrapper
+- Always use Gradle Wrapper (`gradlew` / `gradlew.bat`)
+- Commit `gradle/wrapper/` to version control
+- Keep wrapper version pinned and updated
+
+## Task Avoidance
+- Use `tasks.register` instead of `tasks.create` for lazy configuration
+- Configure tasks only when they will execute
+
+## Testing
+- Surefire equivalent: `tasks.test { useJUnitPlatform() }`
+- Integration tests: separate source set with `testing-jvm` plugin
+- JaCoCo: `jacoco` plugin with `jacocoTestReport` task
+
+## Build Commands
+- `./gradlew build` -- full build with tests
+- `./gradlew check` -- run all checks
+- `./gradlew dependencies` -- dependency tree audit

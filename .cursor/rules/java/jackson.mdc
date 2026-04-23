@@ -1,0 +1,113 @@
+---
+description: Jackson serialization conventions -- ObjectMapper configuration, record deserialization, module registration, security, custom serializers, and Spring Boot auto-configuration
+globs: ["**/src/main/java/**/*.java", "**/application*.yml", "**/application*.yaml"]
+alwaysApply: false
+---
+
+# Jackson Serialization
+
+Aligned with Jackson 3.0 (Spring Boot 4.x) / Jackson 2.18+ (Spring Boot 3.x).
+
+## Spring Boot Auto-Configuration
+Spring Boot auto-configures `ObjectMapper`. Customize via `application.yml`:
+```yaml
+spring:
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: false
+    deserialization:
+      fail-on-unknown-properties: true
+      fail-on-null-for-primitives: true
+    time-zone: UTC
+```
+
+## Module Registration
+```java
+@Bean
+public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
+    return builder -> builder
+        .modules(new JavaTimeModule(), new ParameterNamesModule())
+        .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .featuresToEnable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+}
+```
+
+## Record Deserialization
+Records work out of the box with `ParameterNamesModule` (included by default in Spring Boot):
+```java
+public record CreateUserRequest(
+    @JsonProperty("full_name") String fullName,
+    String email,
+    @JsonFormat(pattern = "yyyy-MM-dd") LocalDate birthDate
+) {}
+```
+
+## Common Annotations
+| Annotation | Purpose |
+|-----------|---------|
+| `@JsonProperty` | Map JSON field name to Java field |
+| `@JsonIgnore` | Exclude field from serialization/deserialization |
+| `@JsonIgnoreProperties(ignoreUnknown = true)` | Class-level: ignore unknown fields |
+| `@JsonFormat` | Date/time format, number shape |
+| `@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)` | Naming strategy |
+| `@JsonInclude(Include.NON_NULL)` | Skip null values |
+| `@JsonCreator` | Custom deserialization constructor |
+| `@JsonValue` / `@JsonCreator` on enums | Custom enum serialization |
+
+## Enum Serialization
+```java
+public enum OrderStatus {
+    PENDING("pending"),
+    CONFIRMED("confirmed");
+
+    private final String value;
+    OrderStatus(String value) { this.value = value; }
+
+    @JsonValue
+    public String getValue() { return value; }
+
+    @JsonCreator
+    public static OrderStatus fromValue(String value) {
+        return Arrays.stream(values())
+            .filter(s -> s.value.equals(value))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unknown status: " + value));
+    }
+}
+```
+
+## Security
+- **NEVER** enable default typing (`ObjectMapper.enableDefaultTyping()`) -- allows arbitrary class instantiation (CVE vector)
+- Use `@JsonTypeInfo` with explicit subtypes only when polymorphic deserialization is needed:
+```java
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = CreditCardPayment.class, name = "credit_card"),
+    @JsonSubTypes.Type(value = BankTransfer.class, name = "bank_transfer")
+})
+public sealed interface Payment permits CreditCardPayment, BankTransfer {}
+```
+- Reject unknown properties to prevent injection of unexpected fields
+
+## Custom Serializers
+```java
+public class MoneySerializer extends JsonSerializer<BigDecimal> {
+    @Override
+    public void serialize(BigDecimal value, JsonGenerator gen, SerializerProvider sp) throws IOException {
+        gen.writeString(value.setScale(2, RoundingMode.HALF_UP).toPlainString());
+    }
+}
+
+public record PriceResponse(
+    @JsonSerialize(using = MoneySerializer.class) BigDecimal amount,
+    String currency
+) {}
+```
+
+## Anti-Patterns
+- `@JsonIgnore` on sensitive fields as the sole security measure (use separate DTOs)
+- Serializing JPA entities directly (triggers lazy loading, circular references)
+- Custom `ObjectMapper` beans that override Spring Boot auto-configuration unnecessarily
+- `WRITE_DATES_AS_TIMESTAMPS = true` (use ISO-8601 strings)

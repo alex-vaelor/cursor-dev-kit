@@ -1,0 +1,181 @@
+---
+description: Spring for GraphQL conventions -- schema design, controller mappings, DataLoader for N+1 prevention, security, error handling, and testing with GraphQlTester
+globs: ["**/src/main/resources/**/*.graphqls", "**/src/main/java/**/*GraphQl*.java", "**/src/main/java/**/*Controller*.java"]
+alwaysApply: false
+---
+
+# Spring for GraphQL
+
+## Schema-First Approach
+Define schema in `src/main/resources/graphql/`:
+```graphql
+# schema.graphqls
+type Query {
+    orderById(id: ID!): Order
+    orders(page: Int = 0, size: Int = 20): OrderConnection!
+}
+
+type Mutation {
+    createOrder(input: CreateOrderInput!): Order!
+}
+
+type Order {
+    id: ID!
+    description: String!
+    total: BigDecimal!
+    status: OrderStatus!
+    items: [OrderItem!]!
+    customer: Customer!
+}
+
+input CreateOrderInput {
+    items: [OrderItemInput!]!
+    shippingAddress: AddressInput!
+}
+
+enum OrderStatus {
+    PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+}
+```
+
+## Controller Mappings
+```java
+@Controller
+public class OrderGraphQlController {
+    private final OrderService orderService;
+
+    @QueryMapping
+    public Order orderById(@Argument Long id) {
+        return orderService.findById(id)
+            .orElseThrow(() -> new OrderNotFoundException(id));
+    }
+
+    @QueryMapping
+    public Connection<Order> orders(@Argument int page, @Argument int size) {
+        return orderService.findAll(PageRequest.of(page, size));
+    }
+
+    @MutationMapping
+    public Order createOrder(@Argument CreateOrderInput input) {
+        return orderService.create(input);
+    }
+}
+```
+
+## N+1 Prevention with DataLoader / @BatchMapping
+```java
+@Controller
+public class OrderGraphQlController {
+
+    @BatchMapping
+    public Map<Order, Customer> customer(List<Order> orders) {
+        var customerIds = orders.stream().map(Order::customerId).toList();
+        var customers = customerService.findByIds(customerIds);
+        return orders.stream().collect(Collectors.toMap(
+            order -> order,
+            order -> customers.get(order.customerId())
+        ));
+    }
+
+    @BatchMapping
+    public Map<Order, List<OrderItem>> items(List<Order> orders) {
+        var orderIds = orders.stream().map(Order::id).toList();
+        var itemsByOrder = itemService.findByOrderIds(orderIds);
+        return orders.stream().collect(Collectors.toMap(
+            order -> order,
+            order -> itemsByOrder.getOrDefault(order.id(), List.of())
+        ));
+    }
+}
+```
+**ALWAYS** use `@BatchMapping` for relationship fields to prevent N+1 queries.
+
+## Security
+```java
+@Controller
+public class AdminGraphQlController {
+
+    @QueryMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<User> allUsers() {
+        return userService.findAll();
+    }
+
+    @MutationMapping
+    @PreAuthorize("hasRole('USER') and @orderSecurity.isOwner(#input.orderId, authentication)")
+    public Order cancelOrder(@Argument CancelOrderInput input) {
+        return orderService.cancel(input);
+    }
+}
+```
+
+## Error Handling
+```java
+@ControllerAdvice
+public class GraphQlExceptionHandler {
+
+    @GraphQlExceptionHandler
+    public GraphQLError handleNotFound(OrderNotFoundException ex) {
+        return GraphQLError.newError()
+            .errorType(ErrorType.NOT_FOUND)
+            .message(ex.getMessage())
+            .build();
+    }
+
+    @GraphQlExceptionHandler
+    public GraphQLError handleValidation(ConstraintViolationException ex) {
+        return GraphQLError.newError()
+            .errorType(ErrorType.BAD_REQUEST)
+            .message("Validation failed")
+            .extensions(Map.of("violations", ex.getConstraintViolations().stream()
+                .map(v -> Map.of("field", v.getPropertyPath().toString(), "message", v.getMessage()))
+                .toList()))
+            .build();
+    }
+}
+```
+
+## Testing with GraphQlTester
+```java
+@GraphQlTest(OrderGraphQlController.class)
+class OrderGraphQlControllerTest {
+    @Autowired
+    private GraphQlTester graphQlTester;
+
+    @MockBean
+    private OrderService orderService;
+
+    @Test
+    void shouldReturnOrder() {
+        given(orderService.findById(1L)).willReturn(Optional.of(testOrder()));
+
+        graphQlTester.documentName("orderById")
+            .variable("id", 1)
+            .execute()
+            .path("orderById.description").entity(String.class).isEqualTo("Test Order")
+            .path("orderById.status").entity(String.class).isEqualTo("CONFIRMED");
+    }
+}
+```
+
+## GraphQL vs REST Decision Guide
+| Factor | Prefer GraphQL | Prefer REST |
+|--------|---------------|-------------|
+| Clients with varying data needs | Yes (mobile vs web) | Fixed contract is fine |
+| Deep nested relationships | Yes (single query) | Multiple round trips |
+| File upload / download | REST is simpler | Yes |
+| Caching | Complex (no HTTP caching) | Simple (HTTP cache headers) |
+| Team familiarity | GraphQL expertise present | REST is well-known |
+| Ecosystem tooling | Growing | Mature |
+
+## Configuration
+```yaml
+spring:
+  graphql:
+    graphiql:
+      enabled: true  # dev only
+    schema:
+      printer:
+        enabled: true  # dev only
+```
+Disable `graphiql` and schema printer in production.

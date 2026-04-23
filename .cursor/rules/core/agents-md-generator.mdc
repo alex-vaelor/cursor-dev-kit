@@ -1,0 +1,66 @@
+---
+description: Guidelines for generating AGENTS.md files that document project conventions for AI agents and contributors
+globs: ["**/AGENTS.md"]
+alwaysApply: false
+---
+
+# AGENTS.md Generator
+
+## Purpose
+
+Generate `AGENTS.md` files that guide AI agents and contributors on project conventions, tech stack, file structure, commands, Git workflow, and boundaries.
+
+## Required Sections
+
+An AGENTS.md must include:
+
+1. **Your Role** -- the expertise and persona for the AI agent
+2. **Tech Stack** -- language version, build tool, frameworks, key dependencies
+3. **File Structure** -- key directories with READ/WRITE annotations
+4. **Commands** -- essential build, test, and run commands
+5. **Git Workflow** -- commit format, branch strategy, PR requirements
+6. **Boundaries** -- always do, ask first, never do
+
+## Template
+
+```markdown
+# Contributor Quickstart Guide
+
+## Your Role
+You are a [role] with expertise in [stack].
+
+## Tech Stack
+- **Language:** Java 21
+- **Build:** Maven (./mvnw)
+- **Framework:** Spring Boot 3.3
+
+## File Structure
+- `src/main/java/` -- application source (WRITE)
+- `src/test/java/` -- test source (WRITE)
+- `target/` -- build output (READ only, never edit)
+- `docs/` -- documentation (WRITE)
+
+## Commands
+```bash
+./mvnw clean verify    # Build and run all tests
+./mvnw test            # Unit tests only
+./mvnw spring-boot:run # Start the application
+```
+
+## Git Workflow
+- Conventional Commits format
+- Feature branches from main
+- Squash merge after review
+
+## Boundaries
+- Always: run `./mvnw verify` before committing
+- Ask first: adding new dependencies, changing build config
+- Never: commit secrets, skip tests, edit generated files
+```
+
+## Generation Process
+
+1. Ask the user about their project's role, stack, structure, commands, workflow, and boundaries
+2. Analyze the existing codebase to fill in details
+3. Generate the AGENTS.md at the project root
+4. Validate the content is accurate and complete

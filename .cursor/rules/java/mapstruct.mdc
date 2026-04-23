@@ -1,0 +1,130 @@
+---
+description: MapStruct conventions -- mapper interfaces, Spring integration, Lombok/record compatibility, nested mappings, custom methods, and Maven annotation processor configuration
+globs: ["**/src/main/java/**/*Mapper*.java", "**/pom.xml"]
+alwaysApply: false
+---
+
+# MapStruct
+
+Version: MapStruct 1.6.x+. Use with Spring Boot via `componentModel = "spring"`.
+
+## Mapper Interface
+```java
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface OrderMapper {
+
+    OrderResponse toResponse(Order entity);
+
+    List<OrderResponse> toResponseList(List<Order> entities);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "status", constant = "PENDING")
+    @Mapping(target = "createdAt", expression = "java(java.time.Instant.now())")
+    Order toEntity(CreateOrderRequest request);
+}
+```
+
+## Key Configuration Options
+| Option | Value | Purpose |
+|--------|-------|---------|
+| `componentModel` | `"spring"` | Generate `@Component`; injectable via DI |
+| `unmappedTargetPolicy` | `ReportingPolicy.ERROR` | Fail compilation on unmapped target fields |
+| `unmappedSourcePolicy` | `ReportingPolicy.WARN` | Warn on unused source fields |
+| `nullValueMappingStrategy` | `NullValueMappingStrategy.RETURN_DEFAULT` | Return empty collections/default objects for null |
+
+## Record Mapping
+MapStruct supports records as source and target:
+```java
+@Mapper(componentModel = "spring")
+public interface UserMapper {
+    UserResponse toResponse(User entity);
+    // Maps entity fields to record constructor parameters by name
+}
+```
+
+## Nested and Collection Mappings
+```java
+@Mapper(componentModel = "spring", uses = {AddressMapper.class, OrderItemMapper.class})
+public interface OrderMapper {
+    @Mapping(source = "shippingAddress", target = "address")
+    OrderResponse toResponse(Order entity);
+    // AddressMapper and OrderItemMapper are auto-invoked for nested types
+}
+```
+
+## Custom Mapping Methods
+```java
+@Mapper(componentModel = "spring")
+public interface OrderMapper {
+
+    @Mapping(target = "totalFormatted", source = "total", qualifiedByName = "formatMoney")
+    OrderResponse toResponse(Order entity);
+
+    @Named("formatMoney")
+    default String formatMoney(BigDecimal amount) {
+        return amount != null ? "$" + amount.setScale(2, RoundingMode.HALF_UP) : null;
+    }
+}
+```
+
+## Null Handling
+```java
+@Mapper(componentModel = "spring",
+    nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+public interface OrderUpdateMapper {
+    void updateEntity(@MappingTarget Order entity, UpdateOrderRequest request);
+    // null fields in request are ignored; non-null fields update the entity
+}
+```
+
+## Maven Annotation Processor Configuration
+Lombok and MapStruct must be configured in the correct order:
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+      </path>
+      <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok-mapstruct-binding</artifactId>
+        <version>0.2.0</version>
+      </path>
+      <path>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct-processor</artifactId>
+        <version>${mapstruct.version}</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+```
+**Order matters**: Lombok must run before MapStruct so generated getters/setters exist.
+
+## Testing Mappers
+```java
+@SpringBootTest(classes = {OrderMapperImpl.class})
+class OrderMapperTest {
+    @Autowired
+    private OrderMapper mapper;
+
+    @Test
+    void shouldMapEntityToResponse() {
+        var order = new Order(1L, "Test", BigDecimal.TEN, OrderStatus.PENDING, Instant.now());
+        var response = mapper.toResponse(order);
+        assertThat(response.description()).isEqualTo("Test");
+        assertThat(response.total()).isEqualByComparingTo(BigDecimal.TEN);
+    }
+}
+```
+
+## Anti-Patterns
+- Manual `BeanUtils.copyProperties()` -- use MapStruct for compile-time safety
+- Mapping logic in controllers or services -- keep in mapper interfaces
+- `unmappedTargetPolicy = IGNORE` globally -- silent mapping bugs
+- Overusing `@Mapping(expression = "java(...)")` -- extract to default methods for testability

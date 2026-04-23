@@ -1,0 +1,78 @@
+---
+description: Domain-Driven Design rules -- strategic design (bounded contexts, context mapping) and tactical patterns (aggregates, entities, value objects, domain events)
+globs: ["**/src/main/java/**/domain/**"]
+alwaysApply: false
+---
+
+# Domain-Driven Design
+
+## Strategic Design
+
+### Bounded Contexts
+- Each bounded context owns its domain model, language, and data
+- Define explicit boundaries -- do not share domain entities across contexts
+- Map bounded contexts to team ownership
+- One microservice should align with one bounded context
+
+### Context Mapping Patterns
+| Pattern | When to Use |
+|---------|-------------|
+| Shared Kernel | Two teams co-own a small shared model |
+| Customer-Supplier | Downstream team depends on upstream team's model |
+| Conformist | Downstream adopts upstream model as-is |
+| Anti-Corruption Layer | Translate between incompatible models |
+| Open Host Service | Published API with well-known protocol |
+| Published Language | Shared interchange format (events, schemas) |
+
+### Subdomain Classification
+- **Core**: Competitive advantage, build in-house
+- **Supporting**: Necessary but not differentiating, build or buy
+- **Generic**: Commodity, buy or use open source
+
+## Tactical Patterns
+
+### Aggregates
+- Aggregate root is the only entry point for external access
+- Enforce all invariants within the aggregate boundary
+- Reference other aggregates by ID, not by direct object reference
+- Keep aggregates small: prefer smaller consistency boundaries
+- Use domain events for cross-aggregate coordination
+
+### Entities
+- Have identity that persists across state changes
+- Implement `equals`/`hashCode` based on business identity
+- JPA entities with Lombok: `@Getter`/`@Setter`, manual `equals` on business key
+
+### Value Objects
+- Immutable, defined by their attributes (no identity)
+- Use Java records for value objects
+- Validate invariants in the constructor (compact constructors for records)
+- Examples: `Money`, `EmailAddress`, `DateRange`
+
+### Domain Events
+- Named in past tense: `OrderPlaced`, `PaymentProcessed`
+- Immutable records carrying event data
+- Published via Spring `ApplicationEventPublisher`
+- Use for cross-aggregate and cross-context communication
+
+### Domain Services
+- Stateless operations that don't belong to a single entity
+- Named after the business operation: `PricingService`, `FraudDetectionService`
+- Do not confuse with application services (orchestration layer)
+
+## Package Structure
+```
+com.example.order
+├── domain/
+│   ├── model/          # Aggregates, entities, value objects
+│   ├── event/          # Domain events
+│   ├── service/        # Domain services
+│   └── repository/     # Repository interfaces (ports)
+├── application/        # Application services, commands, queries
+├── infrastructure/     # Repository implementations, adapters
+└── web/               # Controllers, DTOs
+```
+
+## Related
+- `skills/ddd-patterns/` -- DDD deep guidance
+- `rules/architecture/design-patterns.mdc` -- architecture patterns

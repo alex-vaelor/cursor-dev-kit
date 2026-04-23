@@ -1,0 +1,52 @@
+---
+description: Java logging conventions for structured logging, log levels, observability, and correlation
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Logging
+
+## Facade
+- Use SLF4J as the logging facade: `private static final Logger log = LoggerFactory.getLogger(MyClass.class)`
+- Backend: Logback (Spring Boot default) or Log4j2
+- Never use `System.out.println` or `System.err.println` for logging
+
+## Log Levels
+| Level | Usage |
+|-------|-------|
+| ERROR | System failures, unrecoverable errors, SLA-impacting events |
+| WARN | Recoverable issues, degraded behavior, approaching limits |
+| INFO | Business events, request lifecycle, configuration changes |
+| DEBUG | Developer diagnostics, method entry/exit, variable state |
+| TRACE | Fine-grained debugging, loop iterations (avoid in production) |
+
+## Message Formatting
+- Parameterized messages: `log.info("Order {} processed in {}ms", orderId, elapsed)`
+- Never concatenate strings: avoid `log.debug("User " + name + " logged in")`
+- Include relevant context: entity IDs, operation type, timing
+
+## Structured Logging
+- Use structured JSON logging in production (Logstash encoder or structured-arguments)
+- Include correlation/request IDs via MDC (Mapped Diagnostic Context) or ScopedValue
+- Add key-value pairs: `log.info("Payment processed", kv("orderId", id), kv("amount", total))`
+
+## What to Log
+- Request/response at API boundaries (INFO, exclude sensitive data)
+- State transitions and business decisions (INFO)
+- External service calls with timing (INFO/DEBUG)
+- Configuration at startup (INFO)
+- Exceptions with stack traces at ERROR level only for unexpected failures
+
+## What NOT to Log
+- Passwords, tokens, API keys, PII, credit card numbers
+- Entire request/response bodies in production (use DEBUG for development)
+- Redundant messages (log-and-throw duplicates)
+- High-frequency events at INFO level (use DEBUG or sampling)
+
+## Performance
+- Guard expensive log construction: `if (log.isDebugEnabled()) { log.debug(...) }`
+- Use lazy evaluation with suppliers for expensive arguments
+- Async appenders for high-throughput services
+
+## Related
+- Deep guidance: `skills/java-observability/`

@@ -1,0 +1,48 @@
+---
+description: Java type design rules for value objects, type hierarchies, domain modeling, and eliminating primitive obsession
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Type Design
+
+## Eliminate Primitive Obsession
+- Wrap domain concepts in value objects: `EmailAddress`, `Money`, `OrderId` instead of raw `String`/`long`
+- Use records for simple value objects: `record EmailAddress(String value) {}`
+- Add validation in compact constructors
+- Provides type safety, self-documentation, and a natural home for behavior
+
+## Type Hierarchies
+- Model closed domains with sealed interfaces/classes
+- Use interfaces for contracts, abstract classes only when sharing implementation
+- Keep hierarchies shallow -- prefer composition
+- Nested static classes for logical grouping within a type
+
+## Strategic Type Selection
+- `Optional` for method returns that may be empty -- never for fields or parameters
+- `Set` when uniqueness matters, `List` when order matters
+- Code to interfaces (`List`, `Map`, `Set`) not implementations (`ArrayList`, `HashMap`)
+- `BigDecimal` for all financial/monetary calculations -- never `float`/`double`
+
+## Fluent Interfaces
+- Builder pattern for complex object construction with many optional parameters
+- Return `this` for method chaining; return a new instance for immutable builders
+- Validate in `build()` method, not in individual setters
+
+## Consistent Naming
+- Domain-driven names that match the ubiquitous language
+- Aligned method signatures across related classes (same parameter order, similar return types)
+- Interface/implementation: descriptive pairs (`PaymentGateway` / `StripePaymentGateway`)
+
+## Generics for Reusability
+- Use generic type parameters for reusable containers and algorithms
+- Bounded type parameters for constraints: `<T extends Comparable<T>>`
+- PECS: Producer Extends, Consumer Super
+
+## Self-Documenting Types
+- Types should be self-explanatory: `Duration timeout` not `long timeoutMs`
+- Use enums for fixed sets of values with behavior
+- Records for immutable data transfer
+
+## Related
+- Deep guidance: `skills/java-type-design/`

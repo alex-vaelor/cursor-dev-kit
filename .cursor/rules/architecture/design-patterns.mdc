@@ -1,0 +1,61 @@
+---
+description: Architecture-level design patterns -- layered, hexagonal, CQRS, event sourcing, and microservices patterns for Java systems
+globs: ["**/src/main/java/**"]
+alwaysApply: false
+---
+
+# Architecture Design Patterns
+
+## Layered Architecture
+
+Standard three-layer structure for Spring Boot applications:
+
+| Layer | Package | Responsibility |
+|-------|---------|---------------|
+| Presentation | `*.web` / `*.api` | Controllers, DTOs, request validation |
+| Business | `*.service` | Business logic, orchestration, transactions |
+| Persistence | `*.repository` | Data access, entity mapping |
+
+Rules:
+- Dependencies flow downward only (presentation -> business -> persistence)
+- Never skip layers (controller must not call repository directly)
+- Cross-cutting concerns (logging, security) via AOP or filters
+
+## Hexagonal Architecture (Ports & Adapters)
+
+| Element | Package | Purpose |
+|---------|---------|---------|
+| Domain | `*.domain` | Entities, value objects, domain services -- no framework dependencies |
+| Ports | `*.port.in` / `*.port.out` | Interfaces defining interactions |
+| Adapters | `*.adapter.in.web` / `*.adapter.out.persistence` | Framework-specific implementations |
+
+Rules:
+- Domain has zero dependencies on adapters or frameworks
+- All external interactions go through ports
+- Use dependency inversion: adapters depend on ports, not the reverse
+
+## CQRS
+
+- Separate command (write) and query (read) models
+- Command side: domain model with strict invariants
+- Query side: optimized read models, potentially denormalized
+- Suitable when read and write patterns differ significantly
+
+## Event Sourcing
+
+- Store state as a sequence of events, not current state
+- Rebuild state by replaying events
+- Combine with CQRS for separate read projections
+- Use only when audit trail or temporal queries are requirements
+
+## Pattern Selection
+
+- **Simple CRUD**: Layered architecture
+- **Complex domain**: Hexagonal architecture
+- **High read/write asymmetry**: CQRS
+- **Audit-critical systems**: Event sourcing + CQRS
+
+## Related
+- `rules/architecture/microservices.mdc` -- distributed system patterns
+- `skills/java-design-patterns/` -- GOF patterns
+- `skills/architecture-design/` -- architecture design skill

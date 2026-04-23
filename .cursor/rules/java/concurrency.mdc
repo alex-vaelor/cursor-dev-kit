@@ -1,0 +1,56 @@
+---
+description: Java concurrency rules covering virtual threads, thread safety, CompletableFuture, and modern java.util.concurrent patterns
+globs: ["**/*.java"]
+alwaysApply: false
+---
+
+# Java Concurrency
+
+## Virtual Threads (Java 21+)
+- Use `Executors.newVirtualThreadPerTaskExecutor()` for I/O-bound workloads
+- Do NOT pool virtual threads -- each task gets its own
+- Avoid `synchronized` blocks around blocking I/O (causes pinning); use `ReentrantLock` instead
+- Detect pinning with JFR `VirtualThreadPinned` events
+- Use `ScopedValue` instead of `ThreadLocal` for immutable per-task context
+
+## Thread Safety Fundamentals
+- Prefer `java.util.concurrent` collections over manual synchronization
+- Use `AtomicInteger`, `LongAdder`, `AtomicReference` for lock-free single-variable operations
+- Immutable objects are inherently thread-safe -- prefer them
+- Safe publication via `volatile`, `final` fields, or `Atomic*` references
+
+## Thread Pool Management
+- Size CPU-bound pools to `Runtime.getRuntime().availableProcessors()`
+- Use bounded work queues with explicit `RejectedExecutionHandler`
+- Always shut down executors: `shutdown()` then `awaitTermination()`
+- Name threads for observability: `new ThreadFactory` with descriptive names
+
+## CompletableFuture
+- Use `thenApply`/`thenCompose` for chaining, `exceptionally`/`handle` for errors
+- Always supply a timeout: `orTimeout(duration)` or `completeOnTimeout(default, duration)`
+- Do not block with `.get()` or `.join()` inside reactive/virtual-thread contexts
+
+## Interruption Discipline
+- Never swallow `InterruptedException` -- propagate or restore: `Thread.currentThread().interrupt()`
+- Design tasks for cooperative cancellation via `Future.cancel(true)`
+- Prefer `Lock.lockInterruptibly()` / `tryLock(timeout, unit)` over `synchronized`
+
+## Backpressure
+- Use bounded queues with `CallerRunsPolicy` for graceful load shedding
+- Use `Semaphore` to cap concurrent access to shared resources
+- For streaming: use `Flow` (Reactive Streams) API for backpressure
+
+## Deadlock Prevention
+- Establish global lock ordering
+- Minimize lock scope and duration
+- Use `tryLock` with timeouts instead of unconditional `lock()`
+- Avoid nested synchronization across unrelated components
+
+## Fit-for-Purpose Primitives
+- `LongAdder` for high-contention counters
+- `CopyOnWriteArrayList` for read-mostly observer lists
+- `StampedLock` / `ReadWriteLock` for read-heavy data
+- `CountDownLatch`, `Phaser`, `CyclicBarrier` for coordination
+
+## Related
+- Deep guidance: `skills/java-concurrency/`

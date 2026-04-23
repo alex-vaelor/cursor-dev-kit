@@ -1,0 +1,53 @@
+---
+description: Docker conventions for Java applications including multi-stage builds, JVM tuning, and image security
+globs: ["**/Dockerfile*", "**/*.dockerfile", "**/docker-compose*.yml", "**/docker-compose*.yaml"]
+alwaysApply: false
+---
+
+# Java Docker Containers
+
+## Base Images
+- Build stage: `eclipse-temurin:21-jdk-alpine`
+- Runtime stage: `eclipse-temurin:21-jre-alpine`
+- Minimal: `gcr.io/distroless/java21-debian12` for production
+- Pin image digests for reproducibility in production
+
+## Multi-Stage Builds
+```dockerfile
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY . .
+RUN ./mvnw -DskipTests package
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+## JVM Memory
+- Use container-aware JVM flags (default since Java 10)
+- `-XX:MaxRAMPercentage=75.0` instead of fixed `-Xmx`
+- `-XX:+UseContainerSupport` (enabled by default)
+
+## Alternatives to Dockerfile
+- Jib: `jib-maven-plugin` or `jib-gradle-plugin` -- builds OCI images without Docker daemon
+- Spring Boot Buildpacks: `./mvnw spring-boot:build-image`
+- Both produce layered, reproducible images
+
+## Security
+- Run as non-root user: `USER 1001`
+- No secrets in image layers or build args
+- Scan images with Trivy or Snyk
+- Minimal base images: remove shells and package managers where possible
+
+## Layers
+- Spring Boot layered JARs for efficient Docker caching
+- Separate dependency layers from application code
+- `COPY --from=build /app/target/extracted/dependencies/ ./`
+
+## Health Checks
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget --spider -q http://localhost:8080/actuator/health || exit 1
+```

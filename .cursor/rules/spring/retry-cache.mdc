@@ -1,0 +1,135 @@
+---
+description: Spring Retry and Spring Cache conventions -- declarative retry with @Retryable, cache strategies with @Cacheable, idempotency requirements, cache key design, TTL, and backend selection
+globs: ["**/src/main/java/**/*Service*.java", "**/src/main/java/**/*Cache*.java", "**/src/main/java/**/*Retry*.java"]
+alwaysApply: false
+---
+
+# Spring Retry & Spring Cache
+
+## Spring Retry
+
+### When to Retry
+- Transient failures only: network timeouts, temporary unavailability, optimistic lock exceptions
+- **NEVER** retry non-idempotent operations without an idempotency key
+- **NEVER** retry business validation failures or permanent errors (4xx)
+
+### Declarative (`@Retryable`)
+```java
+@Service
+public class PaymentGatewayService {
+
+    @Retryable(
+        retryFor = {ConnectException.class, SocketTimeoutException.class},
+        noRetryFor = {BusinessValidationException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 10000)
+    )
+    public PaymentResult processPayment(PaymentRequest request) {
+        return gateway.charge(request);
+    }
+
+    @Recover
+    public PaymentResult recoverPayment(ConnectException ex, PaymentRequest request) {
+        log.error("Payment gateway unreachable after retries for order {}", request.orderId(), ex);
+        return PaymentResult.queued(request.orderId());
+    }
+}
+```
+
+### Programmatic (`RetryTemplate`)
+Use when retry logic is complex or conditional:
+```java
+@Bean
+public RetryTemplate retryTemplate() {
+    return RetryTemplate.builder()
+        .maxAttempts(3)
+        .exponentialBackoff(1000, 2.0, 10000)
+        .retryOn(ConnectException.class)
+        .build();
+}
+```
+
+### Retry vs Circuit Breaker
+| Concern | Spring Retry | Resilience4j Circuit Breaker |
+|---------|-------------|------------------------------|
+| Scope | Single operation | Aggregated failure tracking |
+| Use when | Transient failure, few retries | Dependency repeatedly failing |
+| Combines with | Circuit breaker wraps retry | Retry inside circuit breaker |
+
+### Configuration
+```java
+@Configuration
+@EnableRetry
+public class RetryConfig { }
+```
+
+## Spring Cache
+
+### Annotations
+| Annotation | Purpose |
+|-----------|---------|
+| `@Cacheable` | Cache the return value; skip execution on cache hit |
+| `@CacheEvict` | Remove entry from cache |
+| `@CachePut` | Always execute and update cache |
+| `@Caching` | Combine multiple cache operations |
+| `@CacheConfig` | Class-level defaults (cache name, key generator) |
+
+### Cache Key Design
+- Use explicit `key` SpEL expressions for clarity
+- Never rely on default key generation for methods with multiple parameters
+- Include all parameters that affect the result
+```java
+@Cacheable(value = "products", key = "#category + '-' + #page")
+public Page<Product> findByCategory(String category, int page) { }
+
+@CacheEvict(value = "products", allEntries = true)
+public void updateProduct(Product product) { }
+```
+
+### Backend Selection
+| Backend | Use Case |
+|---------|----------|
+| `ConcurrentMapCacheManager` | Local, single-instance, dev/test |
+| Redis (`RedisCacheManager`) | Distributed, multi-instance production |
+| Caffeine (`CaffeineCacheManager`) | Local, high-performance, size/time eviction |
+
+### TTL and Eviction
+- Always set TTL; unbounded caches cause memory leaks
+- Configure per-cache TTL with `RedisCacheConfiguration`:
+```java
+@Bean
+public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
+    var defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+        .entryTtl(Duration.ofMinutes(30))
+        .serializeValuesWith(SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+
+    var cacheConfigs = Map.of(
+        "products", RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofHours(1)),
+        "sessions", RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(15))
+    );
+
+    return RedisCacheManager.builder(factory)
+        .cacheDefaults(defaultConfig)
+        .withInitialCacheConfigurations(cacheConfigs)
+        .build();
+}
+```
+
+### Anti-Patterns
+- Caching mutable objects without defensive copy
+- Caching null values without explicit `unless` condition
+- Missing `@CacheEvict` when data changes
+- Caching inside the same class (proxy self-invocation bypass)
+- No TTL leading to stale data or memory exhaustion
+
+### Configuration
+```java
+@Configuration
+@EnableCaching
+public class CacheConfig { }
+```
+
+## Testing
+- Use `ConcurrentMapCacheManager` in tests (no Redis dependency)
+- Verify cache hits: call method twice, assert downstream called once
+- Verify eviction: update, then verify next read fetches fresh data

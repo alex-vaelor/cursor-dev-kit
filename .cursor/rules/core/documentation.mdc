@@ -1,0 +1,54 @@
+---
+description: Documentation standards for code comments, Javadoc, README files, and project documentation
+globs: ["**/*.java", "**/*.md", "**/README*", "**/CHANGELOG*"]
+alwaysApply: false
+---
+
+# Documentation Standards
+
+## Code Comments
+
+- Explain **why**, not what -- the code explains what
+- Do not add comments that merely restate the code
+- Keep comments current -- stale comments are worse than none
+- Use `TODO` with a ticket reference: `// TODO(GH-123): Add retry logic`
+- Delete commented-out code; use version control for history
+
+## Javadoc
+
+- Document all public and protected APIs
+- Include `@param`, `@return`, and `@throws` tags
+- First sentence is the summary (used in listings)
+- Avoid `@author` tags (use git blame instead)
+- Include code examples for complex APIs
+
+```java
+/**
+ * Finds a user by their email address.
+ *
+ * @param email the email to search for, must not be null
+ * @return the user if found
+ * @throws UserNotFoundException if no user exists with the given email
+ */
+```
+
+## README
+
+Every repository must have a `README.md` with:
+- Project description (what it does, why it exists)
+- Prerequisites (JDK version, Maven, Docker, etc.)
+- Getting started (build, run, test commands)
+- Configuration (environment variables, config files)
+- Architecture overview (for non-trivial projects)
+
+## CHANGELOG
+
+Follow Keep a Changelog format with sections: Added, Changed, Deprecated, Removed, Fixed, Security.
+
+## Architecture Decision Records
+
+Use ADRs for significant technical decisions. Store in `docs/adr/` with sequential numbering.
+
+## Package Documentation
+
+Use `package-info.java` for package-level Javadoc in important packages.
